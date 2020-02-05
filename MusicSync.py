@@ -1,7 +1,10 @@
 import argparse
 import os
 import shutil
-import eyed3
+import mutagen
+from mutagen.id3 import ID3
+
+supportedFormats = (".mp3", ".flac") #Tuple of supported formats. It is useful if you add new formats because with that you can see the functions to modify to execute the program correctly
 
 copiedSongsCount = 0
 
@@ -41,14 +44,14 @@ def copySong(srcFilePath, destFilePath):
     copiedSongsCount += 1
 
 def checkFilters(songPath, filters):
-    song = eyed3.load(songPath)
+    song = mutagen.File(songPath, easy=True)
     if (not song and len(filters) != 0):
         addSongToSongsNotInspectedFile(os.path.abspath(songPath))
         global songsNotInspectedCount
         songsNotInspectedCount += 1
         return False
     for filter in filters:
-        if (not filter(song)):
+        if (not filter((songPath, song))):
             return False
     return True
 
@@ -56,42 +59,68 @@ def syncSongs(src, dest, filters):
     verifySrcAndDest(src, dest)
     for root, _, files in os.walk(src):
         for file in files:
-            if (file.lower().endswith((".mp3", ".aac", ".ogg", ".flac", ".wav"))):
+            if (file.lower().endswith(supportedFormats)):
                 songPathDest = os.path.join(dest, os.path.relpath(os.path.join(root, file), src))
                 if (checkFilters(os.path.join(root, file), filters)):
                     copySong(os.path.join(root, file), songPathDest)
 
+def getFirstPOPMKey(strList):
+    for key in strList:
+        if (key.startswith("POPM:")):
+            return key
+    return None
+
+def getRating(song):
+    mp3, flac = supportedFormats #If there are new supported formats an exception will thrown
+    if song[0].endswith(mp3):
+        id3 = ID3(song[0])
+        popmKey = getFirstPOPMKey(id3.keys())
+        if (popmKey):
+            popm = id3.get(popmKey)
+            return popm.rating
+    elif song[0].endswith(flac):
+        rating = song[1].get("rating")
+        if (rating):
+            rating = int(rating[0]) / 20.0
+    return None
+
+def getYear(song):
+    try:
+        return song[1]["year"][0]
+    except KeyError:
+        pass
+    try:
+        return song[1]["date"][0].split('-')[0]
+    except KeyError:
+        pass
+    return None
+
 def ratingFilter(song, minimumRating):
-    for popm in song.tag.popularities:
-        if popm.rating >= minimumRating:
-            return True
+    rating = getRating(song)
+    if (rating):
+        return rating >= minimumRating
     return False
 
 def yearFilter(song, minimumYear):
-    date = song.tag.getBestDate()
-    if (date):
-        return date.year >= minimumYear 
+    year = getYear(song)
+    if (year):
+        return year >= minimumYear 
     return False
 
 def initParser():
     parser = argparse.ArgumentParser(description="Sync music automatically. You can use filters to select the songs to copy.")
     parser.add_argument("src", metavar="<source>", type=str, help="the music source directory")
     parser.add_argument("dest", metavar="<destination>", type=str, help="the music destination directory")
-    rating = parser.add_mutually_exclusive_group(required=False)
-    rating.add_argument("-r", metavar="<arg>", action="store", dest="minimumByteRating", type=int, help="set up minimum rating of the songs (1-255)")
-    rating.add_argument("-s", metavar="<arg>", action="store", dest="minimumStarsRating", type=int, help="set up minimum stars rating of the songs (1-5)")
-    parser.add_argument("-y", metavar="<arg>", action="store", dest="minimumYear", type=int, help="set up minimum release year of the songs")
+    parser.add_argument("-r", metavar="<arg>", action="store", dest="minimumRating", type=float, help="set up minimum stars rating of the songs (0-5)")
+    parser.add_argument("-y", metavar="<arg>", action="store", dest="minimumYear", type=str, help="set up minimum release year of the songs")
     return parser
 
 def setupFilters(parser, args):
     filters = []
-    if (args.minimumByteRating):
-        filters.append(lambda file : ratingFilter(file, args.minimumByteRating))
-    elif (args.minimumStarsRating):
-        if (args.minimumStarsRating < 1 or args.minimumStarsRating > 5):
-            parser.error("The minimum stars rating value must be between 1 and 5.")
-        setupFilters.starsToRating = [1, 32, 96, 160, 224] #Windows Explorer standards (https://en.wikipedia.org/wiki/ID3#ID3v2_rating_tag_issue)
-        filters.append(lambda file : ratingFilter(file, setupFilters.starsToRating[args.minimumStarsRating - 1]))
+    if (args.minimumRating):
+        if (args.minimumRating < 0 or args.minimumRating > 5):
+            parser.error("The minimum stars rating value must be between 0 and 5.")
+        filters.append(lambda file : ratingFilter(file, args.minimumRating))
     if (args.minimumYear):
         filters.append(lambda file : yearFilter(file, args.minimumYear))
     return filters
@@ -101,15 +130,14 @@ def printSummary():
     print("Not inspected songs:", songsNotInspectedCount)
 
 def main():
-    eyed3.log.setLevel("ERROR")
     parser = initParser()
     args = parser.parse_args()
     filters = setupFilters(parser, args)
     try:
         initInfoFiles()
         syncSongs(args.src, args.dest, filters)
-        closeInfoFiles()
         printSummary()
+        closeInfoFiles()
     except FileNotFoundError as exc:
         parser.error(str(exc))
 
