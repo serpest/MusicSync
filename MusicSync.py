@@ -1,17 +1,16 @@
 import argparse
 import os
 import shutil
+import subprocess
+import tempfile
 import mutagen
 from mutagen.id3 import ID3
-from ppadb.client import Client as AdbClient
 
 supportedFormats = (".mp3", ".flac") #If you add new formats you can see easily the functions to modify
 
 copiedSongsCount = 0
 
 songsNotInspectedCount = 0
-
-device = 0
 
 def main():
     parser = setupParser()
@@ -138,18 +137,31 @@ def createDirectoryIfNecessaryMSC(dirPath):
         os.makedirs(dirPath)
 
 def copySongADB(srcFilePath, destFilePath):
-    #TODO Check if file already exists
     destFilePath = convertWindowsPathToUnixPath(destFilePath)
+    if (doesPathExistADB(destFilePath)):
+        return False
     destDirPath = os.path.dirname(destFilePath)
     createDirectoryIfNecessaryADB(destDirPath)
-    device.push(srcFilePath, destFilePath)
+    pushSongADB(srcFilePath, destFilePath)
     return True
 
 def convertWindowsPathToUnixPath(windowsPath):
     return windowsPath.replace("\\","/")
 
+def doesPathExistADB(path):
+    stderr = tempfile.TemporaryFile()
+    devnull = open(os.devnull, "w")
+    subprocess.call(["adb", "shell", "find", "${}".format(convertStringToLiteral(path))], stdout=devnull, stderr=stderr)
+    return (os.path.getsize(stderr.name) == 0)
+
+def convertStringToLiteral(string):
+    return "'{}'".format(string.replace("'","\\'"))
+
 def createDirectoryIfNecessaryADB(dirPath):
-    device.shell("mkdir -p $'{}'".format(dirPath.replace("'","\\'")))
+    subprocess.call(["adb", "shell", "mkdir", "-p", "${}".format(convertStringToLiteral(dirPath))])
+
+def pushSongADB(srcFilePath, destFilePath):
+    subprocess.call(["adb", "push", "{}".format(srcFilePath), "{}".format(destFilePath)])
 
 def initAll(args):
     initInfoFiles()
@@ -163,13 +175,10 @@ def initInfoFiles():
     songsNotInspectedFile = open("songsNotInspected.txt", "a+", encoding="utf-8")
 
 def connectADBDevice():
-    global device
-    client = AdbClient()
-    devices = client.devices()
-    if (len(devices) < 1):
-        raise RuntimeError("ADB device not detected.")
-    firstDeviceSerialNumber = devices[0].get_serial_no()
-    device = client.device(firstDeviceSerialNumber)
+    connectADBServer()
+
+def connectADBServer():
+    subprocess.call(["adb", "start-server"])
 
 def syncSongs(src, dest, filters, copySongFunction):
     for root, _, files in os.walk(src):
@@ -209,10 +218,15 @@ def getFirstPOPMKey(strList):
 
 def closeAll(args):
     closeInfoFiles()
+    if (args.adb):
+        disconnectADBServer()
 
 def closeInfoFiles():
     copiedSongsFile.close()
     songsNotInspectedFile.close()
+
+def disconnectADBServer():
+    subprocess.call(["adb", "start-server"])
 
 def printSummary():
     print("Copied songs:", copiedSongsCount)
