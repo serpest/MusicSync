@@ -3,14 +3,11 @@ import os
 import shutil
 import subprocess
 import tempfile
+import logging
 import mutagen
 from mutagen.id3 import ID3
 
 supportedFormats = (".mp3", ".flac") #If you add new formats you can see easily the functions to modify
-
-copiedSongsCount = 0
-
-songsNotInspectedCount = 0
 
 def main():
     parser = setupParser()
@@ -117,12 +114,12 @@ def manageSongCopying(srcFilePath, destFilePath, copySongFunction):
         addSongToCopiedSongs(srcFilePath)
 
 def addSongToCopiedSongs(songPath):
-    addSongToCopiedSongsFile(os.path.abspath(songPath))
+    addCopiedSongToLog(os.path.abspath(songPath))
     global copiedSongsCount
     copiedSongsCount += 1
 
-def addSongToCopiedSongsFile(songPath):
-    copiedSongsFile.write(songPath + '\n')
+def addCopiedSongToLog(songPath):
+    logger.info("{} copied.".format(songPath))
 
 def copySongMSC(srcFilePath, destFilePath):
     if (os.path.isfile(destFilePath)):
@@ -149,36 +146,48 @@ def convertWindowsPathToUnixPath(windowsPath):
     return windowsPath.replace("\\","/")
 
 def doesPathExistADB(path):
-    stderr = tempfile.TemporaryFile()
+    tempFile = tempfile.TemporaryFile()
     devnull = open(os.devnull, "w")
-    subprocess.call(["adb", "shell", "find", "${}".format(convertStringToLiteral(path))], stdout=devnull, stderr=stderr)
-    return (os.path.getsize(stderr.name) == 0)
+    subprocess.call(["adb", "shell", "find", "${}".format(convertStringToLiteral(path))], stdout=devnull, stderr=tempFile)
+    return (os.path.getsize(tempFile.name) == 0)
 
 def convertStringToLiteral(string):
     return "'{}'".format(string.replace("'","\\'"))
 
 def createDirectoryIfNecessaryADB(dirPath):
-    subprocess.call(["adb", "shell", "mkdir", "-p", "${}".format(convertStringToLiteral(dirPath))])
+    subprocessCallNoOutput(["adb", "shell", "mkdir", "-p", "${}".format(convertStringToLiteral(dirPath))])
+
+def subprocessCallNoOutput(popenargs):
+    devnull = open(os.devnull, "w")
+    subprocess.call(popenargs, stdout=devnull, stderr=devnull)
 
 def pushSongADB(srcFilePath, destFilePath):
-    subprocess.call(["adb", "push", "{}".format(srcFilePath), "{}".format(destFilePath)])
+    subprocessCallNoOutput(["adb", "push", "{}".format(srcFilePath), "{}".format(destFilePath)])
 
 def initAll(args):
-    initInfoFiles()
+    global copiedSongsCount
+    copiedSongsCount = 0
+    global songsNotInspectedCount
+    songsNotInspectedCount = 0
+    initLogFile()
     if (args.adb):
         connectADBDevice()
 
-def initInfoFiles():
-    global copiedSongsFile
-    global songsNotInspectedFile
-    copiedSongsFile = open("copiedSongs.txt", "a+", encoding="utf-8")
-    songsNotInspectedFile = open("songsNotInspected.txt", "a+", encoding="utf-8")
+def initLogFile():
+    logName = "MusicSync"
+    logFileName = logName + ".log"
+    logFileHandler = logging.FileHandler(logFileName, "a+", "utf-8")
+    logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s",
+                        level=logging.INFO)
+    global logger
+    logger = logging.getLogger(logName)
+    logger.addHandler(logFileHandler)
 
 def connectADBDevice():
     connectADBServer()
 
 def connectADBServer():
-    subprocess.call(["adb", "start-server"])
+    subprocessCallNoOutput(["adb", "start-server"])
 
 def syncSongs(src, dest, filters, copySongFunction):
     for root, _, files in os.walk(src):
@@ -203,12 +212,12 @@ def checkFilters(songPath, filters):
     return True
 
 def addSongToSongsNotInspected(songPath):
-    addSongToSongsNotInspectedFile(os.path.abspath(songPath))
+    addSongNotInspectedToLog(os.path.abspath(songPath))
     global songsNotInspectedCount
     songsNotInspectedCount += 1
 
-def addSongToSongsNotInspectedFile(songPath):
-    songsNotInspectedFile.write(songPath + '\n')
+def addSongNotInspectedToLog(songPath):
+    logger.warning("{} not inspected.".format(songPath))
 
 def getFirstPOPMKey(strList):
     for key in strList:
@@ -217,16 +226,11 @@ def getFirstPOPMKey(strList):
     return None
 
 def closeAll(args):
-    closeInfoFiles()
     if (args.adb):
         disconnectADBServer()
 
-def closeInfoFiles():
-    copiedSongsFile.close()
-    songsNotInspectedFile.close()
-
 def disconnectADBServer():
-    subprocess.call(["adb", "start-server"])
+    subprocessCallNoOutput(["adb", "start-server"])
 
 def printSummary():
     print("Copied songs:", copiedSongsCount)
