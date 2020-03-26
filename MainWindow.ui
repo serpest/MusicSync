@@ -7,7 +7,6 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>307</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -140,7 +139,7 @@
        <item row="1" column="1">
         <layout class="QHBoxLayout" name="srcBox">
          <item>
-          <widget class="QLineEdit" name="destLine"/>
+          <widget class="QLineEdit" name="srcLine"/>
          </item>
          <item>
           <widget class="QPushButton" name="srcBrowseButton">
@@ -157,14 +156,30 @@
           <string>Destination</string>
          </property>
          <property name="buddy">
-          <cstring>srcLine</cstring>
+          <cstring>destLine</cstring>
          </property>
         </widget>
        </item>
        <item row="3" column="1">
         <layout class="QHBoxLayout" name="destBox">
          <item>
-          <widget class="QLineEdit" name="srcLine"/>
+          <widget class="QLineEdit" name="destLine">
+           <property name="statusTip">
+            <string/>
+           </property>
+           <property name="whatsThis">
+            <string/>
+           </property>
+           <property name="inputMask">
+            <string/>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="placeholderText">
+            <string>Omit if you use ADB transfer protocol</string>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QPushButton" name="destBrowseButton">
@@ -181,7 +196,7 @@
           <string>Source</string>
          </property>
          <property name="buddy">
-          <cstring>destLine</cstring>
+          <cstring>srcLine</cstring>
          </property>
         </widget>
        </item>
@@ -213,9 +228,9 @@
   </widget>
  </widget>
  <tabstops>
-  <tabstop>destLine</tabstop>
-  <tabstop>srcBrowseButton</tabstop>
   <tabstop>srcLine</tabstop>
+  <tabstop>srcBrowseButton</tabstop>
+  <tabstop>destLine</tabstop>
   <tabstop>destBrowseButton</tabstop>
   <tabstop>transferProtocolBox</tabstop>
   <tabstop>minimumRatingCheckBox</tabstop>
