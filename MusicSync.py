@@ -1,8 +1,8 @@
 import argparse
 import os
+import sys
 import shutil
 import subprocess
-import tempfile
 import logging
 import mutagen
 from mutagen.id3 import ID3
@@ -14,9 +14,13 @@ def main():
     args = parser.parse_args()
     filters = setupFilters(parser, args)
     copySongFunction = setupCopySongFunction(args)
-    verifySourceDir(args.src)
     initAll(args)
-    syncSongs(args.src, args.dest, filters, copySongFunction)
+    try:
+        verifySourceDir(args.src)
+        syncSongs(args.src, args.dest, filters, copySongFunction)
+    except (FileNotFoundError, ConnectionError) as exc:
+        logger.error("Error: {}".format(str(exc)))
+        sys.exit(1)
     closeAll(args)
     printSummary()
 
@@ -99,11 +103,13 @@ def getYear(song):
     return None
 
 def setupCopySongFunction(args):
+    copySongFunction = None
     if (args.msc):
-        return lambda srcFilePath, destFilePath : manageSongCopying(srcFilePath, destFilePath, copySongMSC)
+        copySongFunction = copySongMSC
     elif (args.adb):
-        return lambda srcFilePath, destFilePath : manageSongCopying(srcFilePath, destFilePath, copySongADB)
-    raise RuntimeError("Trasfer protocol not selected.")
+        copySongFunction = copySongADB
+    assert copySongFunction != None, "Trasfer protocol not selected."
+    return lambda srcFilePath, destFilePath : manageSongCopying(srcFilePath, destFilePath, copySongFunction)
 
 def verifySourceDir(src):
     if not (os.path.isdir(src)):
@@ -134,7 +140,8 @@ def createDirectoryIfNecessaryMSC(dirPath):
         os.makedirs(dirPath)
 
 def copySongADB(srcFilePath, destFilePath):
-    destFilePath = convertWindowsPathToUnixPath(destFilePath)
+    if (os.name == "nt"):
+        destFilePath = convertWindowsPathToUnixPath(destFilePath)
     if (doesPathExistADB(destFilePath)):
         return False
     destDirPath = os.path.dirname(destFilePath)
@@ -146,23 +153,26 @@ def convertWindowsPathToUnixPath(windowsPath):
     return windowsPath.replace("\\","/")
 
 def doesPathExistADB(path):
-    tempFile = tempfile.TemporaryFile()
-    devnull = open(os.devnull, "w")
-    subprocess.call(["adb", "shell", "find", "${}".format(convertStringToLiteral(path))], stdout=devnull, stderr=tempFile)
-    return (os.path.getsize(tempFile.name) == 0)
+    return (getSubprocessCallStdoutSize(["adb", "shell", "find", "${}".format(convertStringToLiteral(path))]) != 0)
+
+def getSubprocessCallStdoutSize(args):
+    popen = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdoutStr, stderrStr = popen.communicate()
+    verifyADBDeviceConnection(stderrStr)
+    return len(stdoutStr)
+
+def verifyADBDeviceConnection(stderrStr):
+    if ((b"no devices/emulators found" in stderrStr) or (b"device unauthorized" in stderrStr)):
+        raise ConnectionError("The device is not connected correctly.")
 
 def convertStringToLiteral(string):
     return "'{}'".format(string.replace("'","\\'"))
 
 def createDirectoryIfNecessaryADB(dirPath):
-    subprocessCallNoOutput(["adb", "shell", "mkdir", "-p", "${}".format(convertStringToLiteral(dirPath))])
-
-def subprocessCallNoOutput(popenargs):
-    devnull = open(os.devnull, "w")
-    subprocess.call(popenargs, stdout=devnull, stderr=devnull)
+    getSubprocessCallStdoutSize(["adb", "shell", "mkdir", "-p", "${}".format(convertStringToLiteral(dirPath))])
 
 def pushSongADB(srcFilePath, destFilePath):
-    subprocessCallNoOutput(["adb", "push", "{}".format(srcFilePath), "{}".format(destFilePath)])
+    getSubprocessCallStdoutSize(["adb", "push", "{}".format(srcFilePath), "{}".format(destFilePath)])
 
 def initAll(args):
     global copiedSongsCount
@@ -176,18 +186,22 @@ def initAll(args):
 def initLogFile():
     logName = "MusicSync"
     logFileName = logName + ".log"
-    logFileHandler = logging.FileHandler(logFileName, "a+", "utf-8")
-    logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s",
-                        level=logging.INFO)
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    fileHandler = logging.FileHandler(logFileName, "a+", "utf-8")
+    fileHandler.setFormatter(formatter)
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(formatter)
     global logger
     logger = logging.getLogger(logName)
-    logger.addHandler(logFileHandler)
+    logger.setLevel(logging.INFO)
+    logger.addHandler(fileHandler)
+    logger.addHandler(consoleHandler)
 
 def connectADBDevice():
     connectADBServer()
 
 def connectADBServer():
-    subprocessCallNoOutput(["adb", "start-server"])
+    getSubprocessCallStdoutSize(["adb", "start-server"])
 
 def syncSongs(src, dest, filters, copySongFunction):
     for root, _, files in os.walk(src):
@@ -230,7 +244,7 @@ def closeAll(args):
         disconnectADBServer()
 
 def disconnectADBServer():
-    subprocessCallNoOutput(["adb", "start-server"])
+    getSubprocessCallStdoutSize(["adb", "start-server"])
 
 def printSummary():
     print("Copied songs:", copiedSongsCount)
