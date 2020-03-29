@@ -163,23 +163,7 @@
        <item row="3" column="1">
         <layout class="QHBoxLayout" name="destBox">
          <item>
-          <widget class="QLineEdit" name="destLine">
-           <property name="statusTip">
-            <string/>
-           </property>
-           <property name="whatsThis">
-            <string/>
-           </property>
-           <property name="inputMask">
-            <string/>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="placeholderText">
-            <string>Omit if you use ADB transfer protocol</string>
-           </property>
-          </widget>
+          <widget class="QLineEdit" name="destLine"/>
          </item>
          <item>
           <widget class="QPushButton" name="destBrowseButton">
@@ -206,7 +190,7 @@
     <item row="1" column="0" colspan="2">
      <widget class="QLabel" name="titleLabel">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -226,19 +210,8 @@
     </item>
    </layout>
   </widget>
+  <widget class="QStatusBar" name="statusbar"/>
  </widget>
- <tabstops>
-  <tabstop>srcLine</tabstop>
-  <tabstop>srcBrowseButton</tabstop>
-  <tabstop>destLine</tabstop>
-  <tabstop>destBrowseButton</tabstop>
-  <tabstop>transferProtocolBox</tabstop>
-  <tabstop>minimumRatingCheckBox</tabstop>
-  <tabstop>minimumRatingSpinBox</tabstop>
-  <tabstop>minimumYearCheckBox</tabstop>
-  <tabstop>minimumYearSpinBox</tabstop>
-  <tabstop>copyButton</tabstop>
- </tabstops>
  <resources/>
  <connections/>
 </ui>

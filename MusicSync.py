@@ -9,20 +9,6 @@ from mutagen.id3 import ID3
 
 supportedFormats = (".mp3", ".flac") #If you add new formats you can see easily the functions to modify
 
-def main():
-    parser = setupParser()
-    args = parser.parse_args()
-    filters = setupFilters(parser, args)
-    copySongFunction = setupCopySongFunction(args)
-    initAll(args)
-    try:
-        verifySourceDir(args.src)
-        syncSongs(args.src, args.dest, filters, copySongFunction)
-    except (FileNotFoundError, ConnectionError) as exc:
-        logger.error("Error: {}".format(str(exc)))
-        sys.exit(1)
-    closeAll(args)
-    printSummary()
 
 def setupParser():
     parser = argparse.ArgumentParser(description="Sync music automatically. You can use filters to select the songs to copy.")
@@ -35,21 +21,39 @@ def setupParser():
     transferProtocol.add_argument("-a", "--adb", action='store_true', dest="adb", help="Android Debug Bridge (ADB)")
     return parser
 
-def setupFilters(parser, args):
+def verifyArgsValidity(args, parser):
+    verifyRatingValidity(args, parser)
+
+def verifyRatingValidity(args, parser):
+    if (not isRatingValid(args.minimumRating)):
+        parser.error("The minimum stars rating value must be between 0 and 5.")
+
+def isRatingValid(rating):
+    return (rating >= 0 or rating <= 5)
+
+def startCopy(args):
+    filters = setupFilters(args)
+    copySongFunction = setupCopySongFunction(args)
+    initAll(args)
+    try:
+        verifySourceDir(args.src)
+        syncSongs(args.src, args.dest, filters, copySongFunction)
+    except (FileNotFoundError, ConnectionError) as exc:
+        logger.error(str(exc))
+    finally:
+        closeAll(args)
+        return (copiedSongsCount, songsNotInspectedCount)
+
+def setupFilters(args):
     filters = []
     if (args.minimumRating):
-        filters.append(setupMinimumRatingFilter(parser, args))
+        filters.append(setupMinimumRatingFilter(args))
     if (args.minimumYear):
         filters.append(setupMinimumYearFilter(args))
     return filters
 
-def setupMinimumRatingFilter(parser, args):
-    if (not isRatingValid(args.minimumRating)):
-        parser.error("The minimum stars rating value must be between 0 and 5.")
+def setupMinimumRatingFilter(args):
     return lambda file : ratingFilter(file, args.minimumRating)
-
-def isRatingValid(rating):
-    return (rating >= 0 or rating <= 5)
 
 def setupMinimumYearFilter(args):
     return lambda file : yearFilter(file, args.minimumYear)
@@ -251,4 +255,8 @@ def printSummary():
     print("Not inspected songs:", songsNotInspectedCount)
 
 if (__name__ == "__main__"):
-    main()
+    parser = setupParser()
+    args = parser.parse_args()
+    verifyArgsValidity(args, parser)
+    startCopy(args)
+    printSummary()
