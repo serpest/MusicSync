@@ -103,21 +103,26 @@ def getYear(song):
     return None
 
 def setupCopySongFunction(args):
-    copySongFunction = None
+    copyFileFunction = None
     if (args.msc):
-        copySongFunction = copySongMSC
+        copyFileFunction = copyFileMSC
     elif (args.adb):
-        copySongFunction = copySongADB
-    assert copySongFunction != None, "Trasfer protocol not selected."
-    return lambda srcFilePath, destFilePath : manageSongCopying(srcFilePath, destFilePath, copySongFunction)
+        copyFileFunction = copyFileADB
+    assert copyFileFunction != None, "Trasfer protocol not selected."
+    return lambda srcFilePath, destFilePath : manageSongCopying(srcFilePath, destFilePath, copyFileFunction)
 
 def verifySourceDir(src):
     if not (os.path.isdir(src)):
         raise FileNotFoundError("The source directory isn't valid.")
 
-def manageSongCopying(srcFilePath, destFilePath, copySongFunction):
-    if (copySongFunction(srcFilePath, destFilePath)):
-        addSongToCopiedSongs(srcFilePath)
+def manageSongCopying(srcSongPath, destSongPath, copyFileFunction):
+    if (copyFileFunction(srcSongPath, destSongPath)):
+        copyFileFunction(convertSongPathToLRCFilePath(srcSongPath), convertSongPathToLRCFilePath(destSongPath))
+        addSongToCopiedSongs(srcSongPath)
+
+def convertSongPathToLRCFilePath(songPath):
+    #Same file name, different extension
+    return os.path.splitext(songPath)[0] + ".lrc"
 
 def addSongToCopiedSongs(songPath):
     addCopiedSongToLog(os.path.abspath(songPath))
@@ -127,8 +132,8 @@ def addSongToCopiedSongs(songPath):
 def addCopiedSongToLog(songPath):
     logger.info("{} copied.".format(songPath))
 
-def copySongMSC(srcFilePath, destFilePath):
-    if (os.path.isfile(destFilePath)):
+def copyFileMSC(srcFilePath, destFilePath):
+    if ((not os.path.isfile(srcFilePath)) or os.path.isfile(destFilePath)):
         return False
     destDirPath = os.path.dirname(destFilePath)
     createDirectoryIfNecessaryMSC(destDirPath)
@@ -139,10 +144,10 @@ def createDirectoryIfNecessaryMSC(dirPath):
     if not (os.path.isdir(dirPath)):
         os.makedirs(dirPath)
 
-def copySongADB(srcFilePath, destFilePath):
+def copyFileADB(srcFilePath, destFilePath):
     if (os.name == "nt"):
         destFilePath = convertWindowsPathToUnixPath(destFilePath)
-    if (doesPathExistADB(destFilePath)):
+    if ((not os.path.isfile(srcFilePath)) or doesPathExistADB(destFilePath)):
         return False
     destDirPath = os.path.dirname(destFilePath)
     createDirectoryIfNecessaryADB(destDirPath)
@@ -207,8 +212,8 @@ def syncSongs(src, dest, filters, copySongFunction):
     for root, _, files in os.walk(src):
         for file in files:
             if (isFileSupported(file)):
-                songPathDest = os.path.join(dest, os.path.relpath(os.path.join(root, file), src))
                 songPathSrc = os.path.join(root, file)
+                songPathDest = os.path.join(dest, os.path.relpath(songPathSrc, src))
                 if (checkFilters(songPathSrc, filters)):
                     copySongFunction(songPathSrc, songPathDest)
 
