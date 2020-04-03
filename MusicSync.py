@@ -10,6 +10,7 @@ from mutagen.id3 import ID3
 supportedFormats = (".mp3", ".flac") #If you add new formats you can see easily the functions to modify
 
 
+
 def setupParser():
     parser = argparse.ArgumentParser(description="Sync music automatically. You can use filters to select the songs to copy.")
     parser.add_argument("src", metavar="<source>", type=str, help="the music source directory")
@@ -21,15 +22,16 @@ def setupParser():
     transferProtocol.add_argument("-a", "--adb", action='store_true', dest="adb", help="Android Debug Bridge (ADB)")
     return parser
 
-def verifyArgsValidity(args, parser):
-    verifyRatingValidity(args, parser)
+def verifyArgsValidity(args):
+    if (args.minimumRating):
+        verifyRatingValidity(args)
 
-def verifyRatingValidity(args, parser):
+def verifyRatingValidity(args):
     if (not isRatingValid(args.minimumRating)):
-        parser.error("The minimum stars rating value must be between 0 and 5.")
+        raise ValueError("The minimum stars rating value must be between 0 and 5.")
 
 def isRatingValid(rating):
-    return (rating >= 0 or rating <= 5)
+    return (rating >= 0 and rating <= 5)
 
 def startCopy(args):
     filters = setupFilters(args)
@@ -38,11 +40,12 @@ def startCopy(args):
     try:
         verifySourceDir(args.src)
         syncSongs(args.src, args.dest, filters, copySongFunction)
+        return (copiedSongsCount, songsNotInspectedCount)
     except (FileNotFoundError, ConnectionError) as exc:
         logger.error(str(exc))
+        raise MusicSyncError(str(exc))
     finally:
         closeAll(args)
-        return (copiedSongsCount, songsNotInspectedCount)
 
 def setupFilters(args):
     filters = []
@@ -54,9 +57,6 @@ def setupFilters(args):
 
 def setupMinimumRatingFilter(args):
     return lambda file : ratingFilter(file, args.minimumRating)
-
-def setupMinimumYearFilter(args):
-    return lambda file : yearFilter(file, args.minimumYear)
 
 def ratingFilter(song, minimumRating):
     rating = getRating(song)
@@ -82,12 +82,21 @@ def getMP3Rating(songPath):
         return rating
     return None
 
+def getFirstPOPMKey(strList):
+    for key in strList:
+        if (key.startswith("POPM:")):
+            return key
+    return None
+
 def getFLACRating(song):
     ratingList = song[1].get("rating")
     if (ratingList):
         rating = int(ratingList[0]) / 20.0
         return rating
     return None
+
+def setupMinimumYearFilter(args):
+    return lambda file : yearFilter(file, args.minimumYear)
 
 def yearFilter(song, minimumYear):
     year = getYear(song)
@@ -115,22 +124,6 @@ def setupCopySongFunction(args):
     assert copySongFunction != None, "Trasfer protocol not selected."
     return lambda srcFilePath, destFilePath : manageSongCopying(srcFilePath, destFilePath, copySongFunction)
 
-def verifySourceDir(src):
-    if not (os.path.isdir(src)):
-        raise FileNotFoundError("The source directory isn't valid.")
-
-def manageSongCopying(srcFilePath, destFilePath, copySongFunction):
-    if (copySongFunction(srcFilePath, destFilePath)):
-        addSongToCopiedSongs(srcFilePath)
-
-def addSongToCopiedSongs(songPath):
-    addCopiedSongToLog(os.path.abspath(songPath))
-    global copiedSongsCount
-    copiedSongsCount += 1
-
-def addCopiedSongToLog(songPath):
-    logger.info("{} copied.".format(songPath))
-
 def copySongMSC(srcFilePath, destFilePath):
     if (os.path.isfile(destFilePath)):
         return False
@@ -145,7 +138,7 @@ def createDirectoryIfNecessaryMSC(dirPath):
 
 def copySongADB(srcFilePath, destFilePath):
     if (os.name == "nt"):
-        destFilePath = convertWindowsPathToUnixPath(destFilePath)
+        destFilePath = os.path.normpath(destFilePath)
     if (doesPathExistADB(destFilePath)):
         return False
     destDirPath = os.path.dirname(destFilePath)
@@ -153,11 +146,11 @@ def copySongADB(srcFilePath, destFilePath):
     pushSongADB(srcFilePath, destFilePath)
     return True
 
-def convertWindowsPathToUnixPath(windowsPath):
-    return windowsPath.replace("\\","/")
-
 def doesPathExistADB(path):
     return (getSubprocessCallStdoutSize(["adb", "shell", "find", "${}".format(convertStringToLiteral(path))]) != 0)
+
+def convertStringToLiteral(string):
+    return "'{}'".format(string.replace("'","\\'"))
 
 def getSubprocessCallStdoutSize(args):
     popen = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -169,14 +162,23 @@ def verifyADBDeviceConnection(stderrStr):
     if ((b"no devices/emulators found" in stderrStr) or (b"device unauthorized" in stderrStr)):
         raise ConnectionError("The device is not connected correctly.")
 
-def convertStringToLiteral(string):
-    return "'{}'".format(string.replace("'","\\'"))
-
 def createDirectoryIfNecessaryADB(dirPath):
     getSubprocessCallStdoutSize(["adb", "shell", "mkdir", "-p", "${}".format(convertStringToLiteral(dirPath))])
 
 def pushSongADB(srcFilePath, destFilePath):
     getSubprocessCallStdoutSize(["adb", "push", "{}".format(srcFilePath), "{}".format(destFilePath)])
+
+def manageSongCopying(srcFilePath, destFilePath, copySongFunction):
+    if (copySongFunction(srcFilePath, destFilePath)):
+        addSongToCopiedSongs(srcFilePath)
+
+def addSongToCopiedSongs(songPath):
+    addCopiedSongToLog(os.path.abspath(songPath))
+    global copiedSongsCount
+    copiedSongsCount += 1
+
+def addCopiedSongToLog(songPath):
+    logger.info("{} copied.".format(songPath))
 
 def initAll(args):
     global copiedSongsCount
@@ -207,13 +209,17 @@ def connectADBDevice():
 def connectADBServer():
     getSubprocessCallStdoutSize(["adb", "start-server"])
 
+def verifySourceDir(src):
+    if not (os.path.isdir(src)):
+        raise FileNotFoundError("The source directory isn't valid.")
+
 def syncSongs(src, dest, filters, copySongFunction):
     for root, _, files in os.walk(src):
         for file in files:
             if (isFileSupported(file)):
-                songPathDest = os.path.join(dest, os.path.relpath(os.path.join(root, file), src))
                 songPathSrc = os.path.join(root, file)
-                if (checkFilters(songPathSrc, filters)):
+                songPathDest = os.path.join(dest, os.path.relpath(songPathSrc, src))
+                if (len(filters) == 0 or checkFilters(songPathSrc, filters)):
                     copySongFunction(songPathSrc, songPathDest)
 
 def isFileSupported(file):
@@ -237,18 +243,16 @@ def addSongToSongsNotInspected(songPath):
 def addSongNotInspectedToLog(songPath):
     logger.warning("{} not inspected.".format(songPath))
 
-def getFirstPOPMKey(strList):
-    for key in strList:
-        if (key.startswith("POPM:")):
-            return key
-    return None
+class MusicSyncError(RuntimeError):
+    def __init__(self, message):
+        super().__init__(message)
 
 def closeAll(args):
     if (args.adb):
         disconnectADBServer()
 
 def disconnectADBServer():
-    getSubprocessCallStdoutSize(["adb", "start-server"])
+    getSubprocessCallStdoutSize(["adb", "kill-server"])
 
 def printSummary():
     print("Copied songs:", copiedSongsCount)
@@ -257,6 +261,13 @@ def printSummary():
 if (__name__ == "__main__"):
     parser = setupParser()
     args = parser.parse_args()
-    verifyArgsValidity(args, parser)
-    startCopy(args)
-    printSummary()
+    try:
+        verifyArgsValidity(args)
+    except ValueError as exc:
+        parser.error(str(exc))
+        sys.exit(1)
+    try:
+        startCopy(args)
+        printSummary()
+    except MusicSyncError as exc:
+        sys.exit(2)
