@@ -30,6 +30,7 @@ class MainWindow(QObject):
         self.window.copyButton.clicked.connect(self.copy)
         self.showSummarySignal.connect(self.showSummary)
         self.showCopyFailedSignal.connect(self.showCopyFailed)
+        self.window.transferProtocolBox.currentTextChanged.connect(self.updateSrcLine)
 
     @Slot()
     def browseSrcDirs(self):
@@ -105,6 +106,19 @@ class MainWindow(QObject):
     @Slot(str)
     def showCopyFailed(self, message):
         QMessageBox.critical(self.window, "Copy failed", message)
+
+    @Slot()
+    def updateSrcLine(self):
+        adbText = "ADB device"
+        if (self.window.transferProtocolBox.currentIndex() == 1): #ADB seleted
+            self.window.srcBrowseButton.setEnabled(False)
+            self.window.srcLine.setEnabled(False)
+            self.window.srcLine.setText(adbText)
+        else:
+            self.window.srcBrowseButton.setEnabled(True)
+            self.window.srcLine.setEnabled(True)
+            if (self.window.srcLine.text() == adbText):
+                self.window.srcLine.setText("")
 
     def show(self):
         self.window.show()
