@@ -2,6 +2,8 @@
 MusicSync is a cross-platform CLI tool that synchronizes music using filters.
 It supports 2 transfer protocols.
 
+![MusicSyncPreview](https://user-images.githubusercontent.com/49209517/82369777-da8fbd80-9a17-11ea-995b-cfbb823ddfb3.png)
+
 
 
 ## Filters
