@@ -138,13 +138,16 @@ def createDirectoryIfNecessaryMSC(dirPath):
 
 def copyFileADB(srcFilePath, destFilePath):
     if (os.name == "nt"):
-        destFilePath = os.path.normpath(destFilePath)
+        destFilePath = convertWindowsPathToUnixPath(destFilePath)
     if ((not os.path.isfile(srcFilePath)) or doesPathExistADB(destFilePath)):
         return False
     destDirPath = os.path.dirname(destFilePath)
     createDirectoryIfNecessaryADB(destDirPath)
     pushSongADB(srcFilePath, destFilePath)
     return True
+
+def convertWindowsPathToUnixPath(windowsPath):
+    return windowsPath.replace("\\","/")
 
 def doesPathExistADB(path):
     return (getSubprocessCallStdoutSize(["adb", "shell", "find", "${}".format(convertStringToLiteral(path))]) != 0)
@@ -166,6 +169,7 @@ def createDirectoryIfNecessaryADB(dirPath):
     getSubprocessCallStdoutSize(["adb", "shell", "mkdir", "-p", "${}".format(convertStringToLiteral(dirPath))])
 
 def pushSongADB(srcFilePath, destFilePath):
+    print(destFilePath)
     getSubprocessCallStdoutSize(["adb", "push", "{}".format(srcFilePath), "{}".format(destFilePath)])
 
 def manageSongCopying(srcSongPath, destSongPath, copyFileFunction):
