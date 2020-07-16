@@ -169,7 +169,6 @@ def createDirectoryIfNecessaryADB(dirPath):
     getSubprocessCallStdoutSize(["adb", "shell", "mkdir", "-p", "${}".format(convertStringToLiteral(dirPath))])
 
 def pushSongADB(srcFilePath, destFilePath):
-    print(destFilePath)
     getSubprocessCallStdoutSize(["adb", "push", "{}".format(srcFilePath), "{}".format(destFilePath)])
 
 def manageSongCopying(srcSongPath, destSongPath, copyFileFunction):
