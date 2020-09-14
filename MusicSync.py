@@ -17,6 +17,7 @@ def setupParser():
     parser.add_argument("dest", metavar="<destination>", type=str, help="the music destination directory")
     parser.add_argument("-r", "--rating", metavar="<arg>", action="store", dest="minimumRating", type=float, help="set up minimum stars rating of the songs (0-5)")
     parser.add_argument("-y", "--year", metavar="<arg>", action="store", dest="minimumYear", type=str, help="set up minimum release year of the songs")
+    parser.add_argument("-l", "--log", action="store_true", help="create a log file")
     transferProtocol = parser.add_mutually_exclusive_group(required=True)
     transferProtocol.add_argument("-m", "--msc", action='store_true', dest="msc", help="Mass Storage Class (MSC)")
     transferProtocol.add_argument("-a", "--adb", action='store_true', dest="adb", help="Android Debug Bridge (ADB)")
@@ -193,23 +194,33 @@ def initAll(args):
     copiedSongsCount = 0
     global songsNotInspectedCount
     songsNotInspectedCount = 0
-    initLogFile()
+    initLog()
+    initLogConsole()
+    if (args.log):
+        initLogFile()
     if (args.adb):
         connectADBDevice()
 
-def initLogFile():
+def initLog():
     logName = "MusicSync"
-    logFileName = logName + ".log"
-    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    fileHandler = logging.FileHandler(logFileName, "a+", "utf-8")
-    fileHandler.setFormatter(formatter)
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setFormatter(formatter)
     global logger
     logger = logging.getLogger(logName)
     logger.setLevel(logging.INFO)
-    logger.addHandler(fileHandler)
+
+def initLogConsole():
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setFormatter(formatter)
+    global logger
     logger.addHandler(consoleHandler)
+
+def initLogFile():
+    logFileName = "MusicSync.log"
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    fileHandler = logging.FileHandler(logFileName, "a+", "utf-8")
+    fileHandler.setFormatter(formatter)
+    global logger
+    logger.addHandler(fileHandler)
 
 def connectADBDevice():
     connectADBServer()
