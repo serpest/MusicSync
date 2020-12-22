@@ -4,19 +4,13 @@ It supports 2 transfer protocols.
 
 ![MusicSyncPreview](https://user-images.githubusercontent.com/49209517/82369777-da8fbd80-9a17-11ea-995b-cfbb823ddfb3.png)
 
-
-
 ## Filters
 * Minimum rating
 * Minimum year
 
-
-
 ## Transfer protocols
 * Mass Storage Class (MSC)
 * Android Debug Bridge (ADB)
-
-
 
 ## Installation
 1. Install ADB following [this guide](https://www.xda-developers.com/install-adb-windows-macos-linux)
@@ -28,5 +22,3 @@ It supports 2 transfer protocols.
 	```
 	python3 -m pip install -r requirements.txt
 	```
-
-

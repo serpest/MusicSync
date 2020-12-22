@@ -6,7 +6,7 @@ from PySide2.QtWidgets import QApplication, QFileDialog, QMessageBox
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QObject, Slot, Signal, QDir
 
-import MusicSync
+from musicsync.core import MusicSync
 
 class MainWindow(QObject):
 
@@ -21,7 +21,7 @@ class MainWindow(QObject):
 
     def loadUi(self):
         loader = QUiLoader()
-        uiPath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "MainWindow.ui")
+        uiPath = "resources\\ui\\main_window.ui"
         self.window = loader.load(uiPath)
 
     def setupActions(self):
@@ -122,14 +122,3 @@ class MainWindow(QObject):
 
     def show(self):
         self.window.show()
-
-
-
-def main():
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())
-
-if __name__ == "__main__":
-    main()
