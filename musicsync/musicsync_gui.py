@@ -1,4 +1,7 @@
-from musicsync.gui import main_window
+import musicsync.gui.main_window
+
+def main():
+    pass
 
 if __name__ == "__main__":
-    pass
+    main()

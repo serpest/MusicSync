@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='MusicSync',
@@ -8,6 +8,6 @@ setup(
     url='https://github.com/serpest/MusicSync',
     author='serpest',
     author_email='serpest@protonmail.com',
-    packages=['musicsync'],
+    packages=find_packages(),
     install_requires=['mutagen', 'PySide2'],
 )

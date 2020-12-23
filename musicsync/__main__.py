@@ -1,3 +1,3 @@
-from musicsync import musicsync_gui
+from musicsync.musicsync_gui import main
 
-musicsync_gui.main()
+main()

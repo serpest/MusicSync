@@ -18,7 +18,7 @@ It supports 2 transfer protocols.
 3. Download the [MusicSync ZIP](https://github.com/serpest/MusicSync/archive/master.zip)
 4. Extract the ZIP
 5. Open the terminal from the directory where you extracted the ZIP
-6. Install MusicSync dependencies running the following command in the terminal
+6. Install MusicSync running the following command in the terminal
 	```
-	python3 -m pip install -r requirements.txt
+	pip install .
 	```

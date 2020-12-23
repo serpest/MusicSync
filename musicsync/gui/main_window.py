@@ -6,30 +6,29 @@ from PySide2.QtWidgets import QApplication, QFileDialog, QMessageBox
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QObject, Slot, Signal, QDir
 
-from musicsync.core import MusicSync
+import musicsync.core.controller
 
 class MainWindow(QObject):
 
-    showSummarySignal = Signal(int, int)
-    showCopyFailedSignal = Signal(str)
+    show_summary_signal = Signal(int, int)
+    show_copy_failed_Signal = Signal(str)
 
     def __init__(self):
         super(MainWindow, self).__init__()
-        self.copyingFlag = False
-        self.loadUi()
-        self.setupActions()
+        self.copying_flag = False
+        self.load_ui()
+        self.setup_actions()
 
-    def loadUi(self):
+    def load_ui(self):
         loader = QUiLoader()
-        uiPath = "resources\\ui\\main_window.ui"
-        self.window = loader.load(uiPath)
+        self.window = loader.load("resources\\ui\\main_window.ui")
 
-    def setupActions(self):
+    def setup_actions(self):
         self.window.srcBrowseButton.clicked.connect(self.browseSrcDirs)
         self.window.destBrowseButton.clicked.connect(self.browseDestDirs)
         self.window.copyButton.clicked.connect(self.copy)
-        self.showSummarySignal.connect(self.showSummary)
-        self.showCopyFailedSignal.connect(self.showCopyFailed)
+        self.show_summary_signal.connect(self.showSummary)
+        self.show_copy_failed_Signal.connect(self.showCopyFailed)
         self.window.transferProtocolBox.currentTextChanged.connect(self.updateSrcLine)
 
     @Slot()
@@ -88,16 +87,16 @@ class MainWindow(QObject):
         thread.start()
     
     def manageCopy(self, args):
-        self.copyingFlag = True
+        self.copying_flag = True
         self.window.statusbar.showMessage("Copying songs...")
         try:
-            songsCount = MusicSync.startCopy(args)
-            self.showSummarySignal.emit(songsCount[0], songsCount[1])
+            songsCount = Controller.copy(args)
+            self.show_summary_signal.emit(songsCount[0], songsCount[1])
         except MusicSync.MusicSyncError as exc:
-            self.showCopyFailedSignal.emit(str(exc))
+            self.show_copy_failed_Signal.emit(str(exc))
         finally:
             self.window.statusbar.showMessage("")
-            self.copyingFlag = False
+            self.copying_flag = False
 
     @Slot(int, int)
     def showSummary(self, copiedSongsNumber, notInspectedSongsNumber):
