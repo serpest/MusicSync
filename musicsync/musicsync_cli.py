@@ -16,7 +16,7 @@ def main():
     file_copier = _setup_file_copier(args)
     filters = _setup_filters(args)
     controller = Controller(file_copier, filters)
-    controller.sync()
+    controller.sync(args.src, args.dest)
 
 def _setup_parser():
     parser = argparse.ArgumentParser(description="Sync music library between devices and folders")
@@ -24,7 +24,7 @@ def _setup_parser():
     parser.add_argument("dest", metavar="<destination>", type=str, help="the music destination directory")
     parser.add_argument("-r", "--rating", metavar="<arg>", action="store", dest="minimum_rating", type=float, help="set up minimum stars rating of the songs (0-5)")
     parser.add_argument("-y", "--year", metavar="<arg>", action="store", dest="minimum_year", type=str, help="set up minimum release year of the songs")
-    parser.add_argument("-l", "--log", action="store_true", help="create a log file")
+    #parser.add_argument("-l", "--log", action="store_true", help="create a log file")
     transfer_protocol = parser.add_mutually_exclusive_group(required=True)
     transfer_protocol.add_argument("-m", "--msc", action='store_true', dest="msc", help="Mass Storage Class (MSC)")
     transfer_protocol.add_argument("-a", "--adb", action='store_true', dest="adb", help="Android Debug Bridge (ADB)")
@@ -44,9 +44,9 @@ def _is_rating_valid(rating):
 def _setup_file_copier(args):
     file_copier = None
     if (args.msc):
-        file_copier = MSCFileCopier
+        file_copier = MSCFileCopier()
     elif (args.adb):
-        file_copier = ADBFileCopier
+        file_copier = ADBFileCopier()
     assert file_copier != None, "Trasfer protocol not selected."
     return file_copier
 

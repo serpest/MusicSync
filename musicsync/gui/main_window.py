@@ -2,11 +2,11 @@ import sys
 import os
 from threading import Thread
 from types import SimpleNamespace
-from PySide2.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PySide2.QtWidgets import QFileDialog, QMessageBox
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QObject, Slot, Signal, QDir
 
-import musicsync.core.controller
+from musicsync.core.controller import *
 
 class MainWindow(QObject):
 
@@ -92,7 +92,7 @@ class MainWindow(QObject):
         try:
             songsCount = Controller.copy(args)
             self.show_summary_signal.emit(songsCount[0], songsCount[1])
-        except MusicSync.MusicSyncError as exc:
+        except MusicSyncError as exc:
             self.show_copy_failed_Signal.emit(str(exc))
         finally:
             self.window.statusbar.showMessage("")

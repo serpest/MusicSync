@@ -1,7 +1,8 @@
+import abc
 from mutagen.id3 import ID3
 
 class Filter:
-    @abstractmethod
+    @abc.abstractmethod
     def filter(self, song):
         pass
 

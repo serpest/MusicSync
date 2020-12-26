@@ -1,115 +1,69 @@
 import os
-import sys
-import logging
 import mutagen
+
+from musicsync.core.file_copiers import *
 
 SUPPORTED_FORMATS = (".mp3", ".flac")
 
 class Controller():
-    def __init__(self, copy_song_function, filters):
-        self.copy_song_function = copy_song_function
+    def __init__(self, file_copier, filters):
+        self.file_copier = file_copier
         self.filters = filters
+        self.copied_songs_count = 0
+        self.no_inspectable_songs_count = 0
 
-    def sync(self):
-        initAll(args)
+    def sync(self, src, dest):
         try:
-            verify_source_dir(args.src)
-            syncSongs(args.src, args.dest, self.filters, copy_song_function)
-            return (copiedSongsCount, songsNotInspectedCount)
-        except (FileNotFoundError, ConnectionError) as exc:
-            logger.error(str(exc))
-            raise MusicSyncError(str(exc))
+            self._verify_source_dir(src)
+            self._sync_songs(src, dest)
+            return (self.copied_songs_count, self.no_inspectable_songs_count)
+        except (FileNotFoundError, FileCopierError) as exc:
+            raise MusicSyncError() from exc
 
-def verifyADBDeviceConnection(stderrStr):
-    if ((b"no devices/emulators found" in stderrStr) or (b"device unauthorized" in stderrStr)):
-        raise ConnectionError("The device is not connected correctly.")
+    def _verify_source_dir(self, src):
+        if not (os.path.isdir(src)):
+            raise FileNotFoundError("The source directory isn't valid.")
 
-def manageSongCopying(srcSongPath, destSongPath, copyFileFunction):
-    if (copyFileFunction(srcSongPath, destSongPath)):
-        copyFileFunction(convertSongPathToLRCFilePath(srcSongPath), convertSongPathToLRCFilePath(destSongPath))
-        addSongToCopiedSongs(srcSongPath)
+    def _sync_songs(self, src, dest):
+        for root, _, files in os.walk(src):
+            for filename in files:
+                if (self._is_file_supported(filename)):
+                    song_path_src = os.path.join(root, filename)
+                    song_path_dest = os.path.join(dest, os.path.relpath(song_path_src, src))
+                    if (len(self.filters) == 0 or self._check_filters(song_path_src)):
+                        self._copy_song(song_path_src, song_path_dest)
+                        self._copy_song_lyrics(song_path_src, song_path_dest)
 
-def convertSongPathToLRCFilePath(songPath):
-    #Same file name, different extension
-    return os.path.splitext(songPath)[0] + ".lrc"
+    def _copy_song(self, song_path_src, song_path_dest):
+        self.file_copier.copy(song_path_src, song_path_dest)
+        self.copied_songs_count += 1
 
-def addSongToCopiedSongs(songPath):
-    addCopiedSongToLog(os.path.abspath(songPath))
-    global copiedSongsCount
-    copiedSongsCount += 1
+    def _copy_song_lyrics(self, song_path_src, song_path_dest):
+        lyrics_path_src = self._get_lyrics_path(song_path_src)
+        lyrics_path_dest = self._get_lyrics_path(song_path_dest)
+        self.file_copier.copy(lyrics_path_src, lyrics_path_dest)
 
-def addCopiedSongToLog(songPath):
-    logger.info("{} copied.".format(songPath))
+    def _get_lyrics_path(self, song_path):
+        #Same filename, different extension
+        return os.path.splitext(song_path)[0] + ".lrc"
 
-def initAll(args):
-    global copiedSongsCount
-    copiedSongsCount = 0
-    global songsNotInspectedCount
-    songsNotInspectedCount = 0
-    initLog()
-    initLogConsole()
-    if (args.log):
-        initLogFile()
+    def _is_file_supported(self, filename):
+        return filename.lower().endswith(SUPPORTED_FORMATS)
 
-def initLog():
-    logName = "MusicSync"
-    global logger
-    logger = logging.getLogger(logName)
-    logger.setLevel(logging.INFO)
-
-def initLogConsole():
-    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setFormatter(formatter)
-    global logger
-    logger.addHandler(consoleHandler)
-
-def initLogFile():
-    logFileName = "MusicSync.log"
-    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    fileHandler = logging.FileHandler(logFileName, "a+", "utf-8")
-    fileHandler.setFormatter(formatter)
-    global logger
-    logger.addHandler(fileHandler)
-
-def verify_source_dir(src):
-    if not (os.path.isdir(src)):
-        raise FileNotFoundError("The source directory isn't valid.")
-
-def syncSongs(src, dest, filters, copySongFunction):
-    for root, _, files in os.walk(src):
-        for file in files:
-            if (isFileSupported(file)):
-                songPathSrc = os.path.join(root, file)
-                songPathDest = os.path.join(dest, os.path.relpath(songPathSrc, src))
-                if (len(filters) == 0 or checkFilters(songPathSrc, filters)):
-                    copySongFunction(songPathSrc, songPathDest)
-
-def isFileSupported(file):
-    return file.lower().endswith(supportedFormats)
-
-def checkFilters(songPath, filters):
-    song = mutagen.File(songPath, easy=True)
-    if (not song and len(filters) != 0):
-        addSongToSongsNotInspected(songPath)
-        return False
-    for filter in filters:
-        if (not filter((songPath, song))):
+    def _check_filters(self, song_path):
+        song = mutagen.File(song_path, easy=True)
+        if (not song and len(self.filters) != 0):
+            self.no_inspectable_songs_count += 1
             return False
-    return True
+        for current_filter in self.filters:
+            if (not current_filter((song_path, song))):
+                return False
+        return True
 
-def addSongToSongsNotInspected(songPath):
-    addSongNotInspectedToLog(os.path.abspath(songPath))
-    global songsNotInspectedCount
-    songsNotInspectedCount += 1
-
-def addSongNotInspectedToLog(songPath):
-    logger.warning("{} not inspected.".format(songPath))
 
 class MusicSyncError(RuntimeError):
+    def __init__(self):
+        super().__init__()
+
     def __init__(self, message):
         super().__init__(message)
-
-def printSummary():
-    print("Copied songs:", copiedSongsCount)
-    print("Not inspected songs:", songsNotInspectedCount)

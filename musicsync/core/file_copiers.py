@@ -1,9 +1,10 @@
 import os
 import shutil
 import subprocess
+import abc
 
 class FileCopier():
-    @abstractmethod
+    @abc.abstractmethod
     def copy(self, src_file_path, dest_file_path):
         pass
 
@@ -13,7 +14,7 @@ class MSCFileCopier():
         if ((not os.path.isfile(src_file_path)) or os.path.isfile(dest_file_path)):
             return False
         dest_dir_path = os.path.dirname(dest_file_path)
-        self._msc_create_directory_if_necessary(dest_dir_path)
+        self._create_directory_if_necessary(dest_dir_path)
         shutil.copy2(src_file_path, dest_dir_path)
         return True
 
@@ -26,42 +27,51 @@ class ADBFileCopier():
     def __init__(self):
         self._connectADBServer()
 
-    def copy(self, src_file_path, dest_file_path):
-        if (os.name == "nt"):
-            dest_file_path = _convert_windows_path_to_unix_path(dest_file_path)
-        if ((not os.path.isfile(src_file_path)) or _adb_does_path_exist(dest_file_path)):
-            return False
-        dest_dir_path = os.path.dirname(dest_file_path)
-        createDirectoryIfNecessaryADB(dest_dir_path)
-        pushSongADB(src_file_path, dest_file_path)
-        return True
-    
     def __del__(self):
         self._disconnectADBServer()
 
+    def copy(self, src_file_path, dest_file_path):
+        if (os.name == "nt"):
+            dest_file_path = self._convert_windows_path_to_unix_path(dest_file_path)
+        if ((not os.path.isfile(src_file_path)) or self._adb_does_path_exist(dest_file_path)):
+            return False
+        dest_dir_path = os.path.dirname(dest_file_path)
+        self._create_directory_if_necessary(dest_dir_path)
+        self._push_file(src_file_path, dest_file_path)
+        return True
+
     def _connectADBServer(self):
-        getSubprocessCallStdoutSize(["adb", "start-server"])
+        _get_subprocess_call_stdout_size(["adb", "start-server"])
 
     def _disconnectADBServer(self):
-        getSubprocessCallStdoutSize(["adb", "kill-server"])
+        _get_subprocess_call_stdout_size(["adb", "kill-server"])
 
-    def _adb_does_path_exist(path):
-        return (getSubprocessCallStdoutSize(["adb", "shell", "find", "${}".format(convert_string_to_Literal(path))]) != 0)
+    def _adb_does_path_exist(self, path):
+        return (_get_subprocess_call_stdout_size(["adb", "shell", "find", "${}".format(_convert_string_to_Literal(path))]) != 0)
 
-    def getSubprocessCallStdoutSize(args):
+    def _get_subprocess_call_stdout_size(self, args):
         popen = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdoutStr, stderrStr = popen.communicate()
-        verifyADBDeviceConnection(stderrStr)
-        return len(stdoutStr)
+        stdout_str, stderr_str = popen.communicate()
+        _verify_device_connection(stderr_str)
+        return len(stdout_str)
 
-    def createDirectoryIfNecessaryADB(dirPath):
-        getSubprocessCallStdoutSize(["adb", "shell", "mkdir", "-p", "${}".format(convert_string_to_Literal(dirPath))])
+    def _create_directory_if_necessary(self, dir_path):
+        _get_subprocess_call_stdout_size(["adb", "shell", "mkdir", "-p", "${}".format(_convert_string_to_Literal(dir_path))])
 
-    def pushSongADB(srcFilePath, destFilePath):
-        getSubprocessCallStdoutSize(["adb", "push", "{}".format(srcFilePath), "{}".format(destFilePath)])
+    def _push_file(self, src_file_path, dest_file_path):
+        _get_subprocess_call_stdout_size(["adb", "push", "{}".format(src_file_path), "{}".format(dest_file_path)])
 
-    def convert_string_to_Literal(string):
+    def _verify_device_connection(self, stderr_str):
+        if ((b"no devices/emulators found" in stderr_str) or (b"device unauthorized" in stderr_str)):
+            raise ConnectionError("The device is not connected correctly.")
+
+    def _convert_string_to_Literal(self, string):
         return "'{}'".format(string.replace("'","\\'"))
     
-    def _convert_windows_path_to_unix_path(windowsPath):
-        return windowsPath.replace("\\","/")
+    def _convert_windows_path_to_unix_path(self, windows_parth):
+        return windows_parth.replace("\\","/")
+
+
+class FileCopierError(RuntimeError):
+    def __init__(self, message):
+        super().__init__(message)
