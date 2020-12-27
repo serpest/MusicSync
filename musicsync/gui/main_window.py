@@ -1,17 +1,15 @@
-import sys
-import os
 from threading import Thread
-from types import SimpleNamespace
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QObject, Slot, Signal, QDir
 
 from musicsync.core.controller import *
+from musicsync.core.file_copiers import *
+from musicsync.core.filters import *
 
 class MainWindow(QObject):
-
     show_summary_signal = Signal(int, int)
-    show_copy_failed_Signal = Signal(str)
+    show_copy_failed_signal = Signal(str)
 
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -21,77 +19,79 @@ class MainWindow(QObject):
 
     def load_ui(self):
         loader = QUiLoader()
-        self.window = loader.load("resources\\ui\\main_window.ui")
+        self.window = loader.load("musicsync\\resources\\ui\\main_window.ui")
 
     def setup_actions(self):
-        self.window.srcBrowseButton.clicked.connect(self.browseSrcDirs)
-        self.window.destBrowseButton.clicked.connect(self.browseDestDirs)
-        self.window.copyButton.clicked.connect(self.copy)
-        self.show_summary_signal.connect(self.showSummary)
-        self.show_copy_failed_Signal.connect(self.showCopyFailed)
-        self.window.transferProtocolBox.currentTextChanged.connect(self.updateSrcLine)
+        self.window.srcBrowseButton.clicked.connect(self.browse_src_dirs)
+        self.window.destBrowseButton.clicked.connect(self.browse_dest_dirs)
+        self.window.syncButton.clicked.connect(self.sync)
+        self.show_summary_signal.connect(self.show_summary)
+        self.show_copy_failed_signal.connect(self.show_copy_failed)
+        self.window.transferProtocolBox.currentTextChanged.connect(self.update_src_line)
 
     @Slot()
-    def browseSrcDirs(self):
-        self.putExistingDirPathInLineEdit(self.window.srcLine)
+    def browse_src_dirs(self):
+        self.put_existing_dir_path_in_lineedit(self.window.srcLine)
 
-    def putExistingDirPathInLineEdit(self, lineEdit):
+    def put_existing_dir_path_in_lineedit(self, lineedit):
         path = QDir.toNativeSeparators(QFileDialog.getExistingDirectoryUrl(self.window).path())
         if (os.name == "nt"):
             #Remove the root slash
             path = path[1:]
-        lineEdit.setText(path)
+        lineedit.setText(path)
 
     @Slot()
-    def browseDestDirs(self):
-        self.putExistingDirPathInLineEdit(self.window.destLine)
+    def browse_dest_dirs(self):
+        self.put_existing_dir_path_in_lineedit(self.window.destLine)
 
     @Slot()
-    def copy(self):
-        if (self.copyingFlag):
+    def sync(self):
+        if (self.copying_flag):
             QMessageBox.critical(self.window, "Copy not allowed", "There is already a copy task in progress.")
             return
-        if (not self.confirmCopy()):
+        if (not self.confirm_copy()):
             return
-        args = self.getCopyArgs()
-        self.startCopyProcess(args)
+        file_copier = get_file_copier()
+        filters = get_filters()
+        src = self.window.srcLine.text()
+        dest = self.window.destLine.text()
+        self.start_copy_process(file_copier, filters, src, dest)
 
-    def confirmCopy(self):
+    def get_file_copier(self):
+        transfer_protocol_box_index = self.window.transferProtocolBox.currentIndex()
+        if (transfer_protocol_box_index == 0):
+            return MSCFileCopier
+        elif (transfer_protocol_box_index == 1):
+            return ADBFileCopier
+        raise RuntimeError("Transfer protocol not selected")
+
+    def get_filters(self):
+        filters = []
+        #Rating filter
+        if (self.window.minimumRatingCheckBox.isChecked()):
+            minimum_rating = self.window.minimumRatingSpinBox.value()
+            filters.append(RatingFilter(minimum_rating))
+        #Year filter
+        if (self.window.minimumYearCheckBox.isChecked()):
+            minimum_year = str(self.window.minimumYearSpinBox.value())
+            filters.append(YearFilter(minimum_year))
+        return filters
+
+    def confirm_copy(self):
         answer = QMessageBox.question(self.window, "Copy confirmation", "Do you want to start the copy?")
         return (QMessageBox.StandardButton.Yes == answer)
 
-    def getCopyArgs(self):
-        namespace = SimpleNamespace()
-        #Source directory
-        namespace.src = self.window.srcLine.text()
-        #Destination directory
-        namespace.dest = self.window.destLine.text()
-        #Transfer protocol
-        transferProtocolBoxIndex = self.window.transferProtocolBox.currentIndex()
-        namespace.msc = (transferProtocolBoxIndex == 0)
-        namespace.adb = (transferProtocolBoxIndex == 1)
-        #Minimum rating filter
-        if (self.window.minimumRatingCheckBox.isChecked()):
-            namespace.minimumRating = self.window.minimumRatingSpinBox.value()
-        else:
-            namespace.minimumRating = None
-        #Minimum year filter
-        if (self.window.minimumYearCheckBox.isChecked()):
-            namespace.minimumYear = str(self.window.minimumYearSpinBox.value())
-        else:
-            namespace.minimumYear = None
-        return namespace
-
-    def startCopyProcess(self, args):
-        thread = Thread(target=self.manageCopy, args=(args, ))
+    def start_copy_process(self, file_copier, filters, src, dest):
+        thread = Thread(target=self.manage_copy, args=(file_copier, filters, src, dest))
         thread.start()
     
-    def manageCopy(self, args):
+    def manage_copy(self, file_copier, filters, src, dest):
         self.copying_flag = True
-        self.window.statusbar.showMessage("Copying songs...")
+        self.window.statusbar.showMessage("Syncing songs...")
         try:
-            songsCount = Controller.copy(args)
-            self.show_summary_signal.emit(songsCount[0], songsCount[1])
+            controller = Controller(file_copier, filters)
+            songs_count = controller.copy(src, dest)
+            self.show_summary_signal.emit(songs_count[0], songs_count[1])
         except MusicSyncError as exc:
             self.show_copy_failed_Signal.emit(str(exc))
         finally:
@@ -99,24 +99,24 @@ class MainWindow(QObject):
             self.copying_flag = False
 
     @Slot(int, int)
-    def showSummary(self, copiedSongsNumber, notInspectedSongsNumber):
-        QMessageBox.information(self.window, "Summary", f"Copied songs: {copiedSongsNumber}\nNot inspected songs: {notInspectedSongsNumber}")
+    def show_summary(self, copied_songs_count, no_inspectable_songs_count):
+        QMessageBox.information(self.window, "Summary", f"Copied songs: {copied_songs_count}\nNot inspected songs: {no_inspectable_songs_count}")
 
     @Slot(str)
-    def showCopyFailed(self, message):
+    def show_copy_failed(self, message):
         QMessageBox.critical(self.window, "Copy failed", message)
 
     @Slot()
-    def updateSrcLine(self):
-        adbText = "ADB device"
+    def update_src_line(self):
+        adb_text = "ADB device"
         if (self.window.transferProtocolBox.currentIndex() == 1): #ADB seleted
             self.window.srcBrowseButton.setEnabled(False)
             self.window.srcLine.setEnabled(False)
-            self.window.srcLine.setText(adbText)
+            self.window.srcLine.setText(adb_text)
         else:
             self.window.srcBrowseButton.setEnabled(True)
             self.window.srcLine.setEnabled(True)
-            if (self.window.srcLine.text() == adbText):
+            if (self.window.srcLine.text() == adb_text):
                 self.window.srcLine.setText("")
 
     def show(self):
