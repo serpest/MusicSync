@@ -8,7 +8,7 @@ from musicsync.core.file_copiers import *
 from musicsync.core.filters import *
 
 class MainWindow(QObject):
-    show_summary_signal = Signal(int, int)
+    show_summary_signal = Signal(int, int, int)
     show_copy_failed_signal = Signal(str)
 
     def __init__(self):
@@ -51,8 +51,8 @@ class MainWindow(QObject):
             return
         if (not self.confirm_copy()):
             return
-        file_copier = get_file_copier()
-        filters = get_filters()
+        file_copier = self.get_file_copier()
+        filters = self.get_filters()
         src = self.window.srcLine.text()
         dest = self.window.destLine.text()
         self.start_copy_process(file_copier, filters, src, dest)
@@ -60,9 +60,9 @@ class MainWindow(QObject):
     def get_file_copier(self):
         transfer_protocol_box_index = self.window.transferProtocolBox.currentIndex()
         if (transfer_protocol_box_index == 0):
-            return MSCFileCopier
+            return MSCFileCopier()
         elif (transfer_protocol_box_index == 1):
-            return ADBFileCopier
+            return ADBFileCopier()
         raise RuntimeError("Transfer protocol not selected")
 
     def get_filters(self):
@@ -90,8 +90,9 @@ class MainWindow(QObject):
         self.window.statusbar.showMessage("Syncing songs...")
         try:
             controller = Controller(file_copier, filters)
-            songs_count = controller.copy(src, dest)
-            self.show_summary_signal.emit(songs_count[0], songs_count[1])
+            songs_counts = controller.sync(src, dest)
+            copied_songs_count, no_inspectable_songs_count, corrupted_song_files_count = songs_counts
+            self.show_summary_signal.emit(copied_songs_count, no_inspectable_songs_count, corrupted_song_files_count)
         except MusicSyncError as exc:
             self.show_copy_failed_Signal.emit(str(exc))
         finally:
@@ -99,8 +100,8 @@ class MainWindow(QObject):
             self.copying_flag = False
 
     @Slot(int, int)
-    def show_summary(self, copied_songs_count, no_inspectable_songs_count):
-        QMessageBox.information(self.window, "Summary", f"Copied songs: {copied_songs_count}\nNot inspected songs: {no_inspectable_songs_count}")
+    def show_summary(self, copied_songs_count, no_inspectable_songs_count, corrupted_song_files_count):
+        QMessageBox.information(self.window, "Summary", f"Copied songs: {copied_songs_count}\nNot inspected songs: {no_inspectable_songs_count}\nCorrupted song files: {corrupted_song_files_count}")
 
     @Slot(str)
     def show_copy_failed(self, message):

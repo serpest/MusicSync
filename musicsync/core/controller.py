@@ -3,7 +3,7 @@ import mutagen
 
 from musicsync.core.file_copiers import *
 
-SUPPORTED_FORMATS = (".mp3", ".flac")
+SUPPORTED_FORMATS = (".mp3", ".flac") #Make sure that you modify filters implementation before changing this value
 
 class Controller():
     def __init__(self, file_copier, filters):
@@ -11,12 +11,13 @@ class Controller():
         self.filters = filters
         self.copied_songs_count = 0
         self.no_inspectable_songs_count = 0
+        self.corrupted_song_files_count = 0
 
     def sync(self, src, dest):
         try:
             self._verify_source_dir(src)
             self._sync_songs(src, dest)
-            return (self.copied_songs_count, self.no_inspectable_songs_count)
+            return (self.copied_songs_count, self.no_inspectable_songs_count, self.corrupted_song_files_count)
         except (FileNotFoundError, FileCopierError) as exc:
             raise MusicSyncError() from exc
 
@@ -51,12 +52,16 @@ class Controller():
         return filename.lower().endswith(SUPPORTED_FORMATS)
 
     def _check_filters(self, song_path):
-        song = mutagen.File(song_path, easy=True)
+        try:
+            song = mutagen.File(song_path, easy=True)
+        except mutagen.mp3.HeaderNotFoundError as exc:
+            self.corrupted_song_files_count += 1
+            return False
         if (not song and len(self.filters) != 0):
             self.no_inspectable_songs_count += 1
             return False
         for current_filter in self.filters:
-            if (not current_filter((song_path, song))):
+            if (not current_filter.check(song_path, song)):
                 return False
         return True
 
