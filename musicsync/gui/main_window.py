@@ -67,15 +67,33 @@ class MainWindow(QObject):
 
     def get_filters(self):
         filters = []
-        #Rating filter
-        if (self.window.minimumRatingCheckBox.isChecked()):
-            minimum_rating = self.window.minimumRatingSpinBox.value()
-            filters.append(RatingFilter(minimum_rating))
-        #Year filter
-        if (self.window.minimumYearCheckBox.isChecked()):
-            minimum_year = str(self.window.minimumYearSpinBox.value())
-            filters.append(YearFilter(minimum_year))
+        rating_filter = self._setup_rating_filter()
+        if rating_filter is not None:
+            filters.append(rating_filter)
+        year_filter = self._setup_year_filter()
+        if year_filter is not None:
+            filters.append(year_filter)
         return filters
+
+    def _setup_rating_filter(self):
+        if self.window.minimumRatingCheckBox.isChecked() or self.window.maximumRatingCheckBox.isChecked():
+            rating_filter = RatingFilter()
+            if self.window.minimumRatingCheckBox.isChecked():
+                rating_filter.set_minimum_rating(self.window.minimumRatingSpinBox.value())
+            if self.window.maximumRatingCheckBox.isChecked():
+                rating_filter.set_maximum_rating(self.window.maximumRatingSpinBox.value())
+            return rating_filter
+        return None
+
+    def _setup_year_filter(self):
+        if self.window.minimumYearCheckBox.isChecked() or self.window.maximumYearCheckBox.isChecked():
+            year_filter = YearFilter()
+            if self.window.minimumYearCheckBox.isChecked():
+                year_filter.set_minimum_year(self.window.minimumYearSpinBox.value())
+            if self.window.maximumYearCheckBox.isChecked():
+                year_filter.set_maximum_year(self.window.maximumYearSpinBox.value())
+            return year_filter
+        return None
 
     def confirm_copy(self):
         answer = QMessageBox.question(self.window, "Copy confirmation", "Do you want to start the copy?")
@@ -94,7 +112,7 @@ class MainWindow(QObject):
             copied_songs_count, no_inspectable_songs_count, corrupted_song_files_count = songs_counts
             self.show_summary_signal.emit(copied_songs_count, no_inspectable_songs_count, corrupted_song_files_count)
         except MusicSyncError as exc:
-            self.show_copy_failed_Signal.emit(str(exc))
+            self.show_copy_failed_signal.emit(str(exc))
         finally:
             self.window.statusbar.showMessage("")
             self.copying_flag = False

@@ -2,8 +2,11 @@ import sys
 import argparse
 
 from musicsync.core.file_copiers import *
-from musicsync.core.filters import *
+from musicsync.core.filters import RatingFilter, YearFilter
 from musicsync.core.controller import Controller
+
+MIN_RATING_VALUE = 0
+MAX_RATING_VALUE = 5
 
 def main():
     parser = _setup_parser()
@@ -20,26 +23,33 @@ def main():
 
 def _setup_parser():
     parser = argparse.ArgumentParser(description="Sync music library between devices and folders")
-    parser.add_argument("src", metavar="<source>", type=str, help="the music source directory")
-    parser.add_argument("dest", metavar="<destination>", type=str, help="the music destination directory")
-    parser.add_argument("-r", "--rating", metavar="<arg>", action="store", dest="minimum_rating", type=float, help="set up minimum stars rating of the songs (0-5)")
-    parser.add_argument("-y", "--year", metavar="<arg>", action="store", dest="minimum_year", type=str, help="set up minimum release year of the songs")
+    parser.add_argument("src", metavar="<source>", type=str, help="music library source directory")
+    parser.add_argument("dest", metavar="<destination>", type=str, help="music library destination directory")
+    rating_filters_group = parser.add_argument_group("rating filters", "set up minimum and/or maximum stars rating of the songs")
+    rating_filters_group.add_argument("-r", "--min-rating", metavar="<arg>", action="store", dest="minimum_rating", type=float, help="minimum rating (0-5)")
+    rating_filters_group.add_argument("-t", "--max-rating", metavar="<arg>", action="store", dest="maximum_rating", type=float, help="maximum rating (0-5)")
+    year_filters_group = parser.add_argument_group("year filters", "set up minimum and/or maximum release year of the songs")
+    year_filters_group.add_argument("-y", "--min-year", metavar="<arg>", action="store", dest="minimum_year", type=str, help="minimum release year")
+    year_filters_group.add_argument("-u", "--max-year", metavar="<arg>", action="store", dest="maximum_year", type=str, help="maximum release year")
     #parser.add_argument("-l", "--log", action="store_true", help="create a log file")
-    transfer_protocol = parser.add_mutually_exclusive_group(required=True)
-    transfer_protocol.add_argument("-m", "--msc", action='store_true', dest="msc", help="Mass Storage Class (MSC)")
-    transfer_protocol.add_argument("-a", "--adb", action='store_true', dest="adb", help="Android Debug Bridge (ADB)")
+    transfer_protocol_group = parser.add_argument_group("transfer protocol")
+    transfer_protocol_mutually_exclusive_group = transfer_protocol_group.add_mutually_exclusive_group(required=True)
+    transfer_protocol_mutually_exclusive_group.add_argument("-m", "--msc", action='store_true', dest="msc", help="Mass Storage Class (MSC)")
+    transfer_protocol_mutually_exclusive_group.add_argument("-a", "--adb", action='store_true', dest="adb", help="Android Debug Bridge (ADB)")
     return parser
 
 def _validate_args(args):
-    if (args.minimum_rating):
+    if args.minimum_rating is not None:
         _validate_rating(args.minimum_rating)
+    if args.maximum_rating is not None:
+        _validate_rating(args.maximum_rating)
 
 def _validate_rating(rating):
     if (not _is_rating_valid(rating)):
-        raise ValueError("The rating value must be between 0 and 5.")
+        raise ValueError(f"The rating value must be between {MIN_RATING_VALUE} and {MAX_RATING_VALUE}.")
 
 def _is_rating_valid(rating):
-    return (rating >= 0 and rating <= 5)
+    return (rating >= MIN_RATING_VALUE and rating <= MAX_RATING_VALUE)
 
 def _setup_file_copier(args):
     file_copier = None
@@ -47,16 +57,38 @@ def _setup_file_copier(args):
         file_copier = MSCFileCopier()
     elif (args.adb):
         file_copier = ADBFileCopier()
-    assert file_copier != None, "Trasfer protocol not selected."
+    assert file_copier is not None, "Trasfer protocol not selected."
     return file_copier
 
 def _setup_filters(args):
     filters = []
-    if (args.minimum_rating):
-        filters.append(RatingFilter(args.minimum_rating))
-    if (args.minimum_year):
-        filters.append(YearFilter(args.minimum_year))
+    rating_filter = _setup_rating_filter(args)
+    if rating_filter is not None:
+        filters.append(rating_filter)
+    year_filter = _setup_year_filter(args)
+    if year_filter is not None:
+        filters.append(year_filter)
     return filters
+
+def _setup_rating_filter(args):
+    if args.minimum_rating is not None or args.maximum_rating is not None:
+        rating_filter = RatingFilter()
+        if args.minimum_rating is not None:
+            rating_filter.set_minimum_rating(args.minimum_rating)
+        if args.maximum_rating is not None:
+            rating_filter.set_maximum_rating(args.maximum_rating)
+        return rating_filter
+    return None
+
+def _setup_year_filter(args):
+    if args.minimum_year is not None or args.maximum_year is not None:
+        year_filter = YearFilter()
+        if args.minimum_year is not None:
+            year_filter.set_minimum_year(args.minimum_year)
+        if args.maximum_year is not None:
+            year_filter.set_maximum_year(args.maximum_year)
+        return year_filter
+    return None
 
 if __name__ == "__main__":
     main()

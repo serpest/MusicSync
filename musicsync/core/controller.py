@@ -19,7 +19,7 @@ class Controller():
             self._sync_songs(src, dest)
             return (self.copied_songs_count, self.no_inspectable_songs_count, self.corrupted_song_files_count)
         except (FileNotFoundError, FileCopierError) as exc:
-            raise MusicSyncError() from exc
+            raise MusicSyncError("Sync blocked") from exc
 
     def _verify_source_dir(self, src):
         if not (os.path.isdir(src)):
@@ -67,8 +67,5 @@ class Controller():
 
 
 class MusicSyncError(RuntimeError):
-    def __init__(self):
-        super().__init__()
-
     def __init__(self, message):
         super().__init__(message)
