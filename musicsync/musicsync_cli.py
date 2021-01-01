@@ -2,7 +2,7 @@ import sys
 import argparse
 
 from musicsync.core.file_copiers import MSCFileCopier, ADBFileCopier
-from musicsync.core.filters import RatingFilter, YearFilter
+from musicsync.core.filters import RatingFilter, YearFilter, GenreFilter, ArtistFilter
 from musicsync.core.controller import Controller
 
 MIN_RATING_VALUE = 0
@@ -31,6 +31,9 @@ def _setup_parser():
     year_filters_group = parser.add_argument_group("year filters", "set up minimum and/or maximum release year of the songs")
     year_filters_group.add_argument("-y", "--min-year", metavar="<arg>", action="store", dest="minimum_year", type=str, help="minimum release year")
     year_filters_group.add_argument("-u", "--max-year", metavar="<arg>", action="store", dest="maximum_year", type=str, help="maximum release year")
+    other_filters_group = parser.add_argument_group("other filters")
+    other_filters_group.add_argument("-g", "--genres", metavar="<arg(s)>", action="store", dest="genres", type=str, nargs="+", help="type(s) of music")
+    other_filters_group.add_argument("-i", "--artists", metavar="<arg(s)>", action="store", dest="artists", type=str, nargs="+", help="song artist(s)")
     # parser.add_argument("-l", "--log", action="store_true", help="create a log file")
     transfer_protocol_group = parser.add_argument_group("transfer protocol")
     transfer_protocol_mutually_exclusive_group = transfer_protocol_group.add_mutually_exclusive_group(required=True)
@@ -66,6 +69,12 @@ def _setup_filters(args):
     year_filter = _setup_year_filter(args)
     if year_filter is not None:
         filters.append(year_filter)
+    genre_filter = _setup_genre_filter(args)
+    if genre_filter is not None:
+        filters.append(genre_filter)
+    artist_filter = _setup_artist_filter(args)
+    if artist_filter is not None:
+        filters.append(artist_filter)
     return filters
 
 def _setup_rating_filter(args):
@@ -86,6 +95,16 @@ def _setup_year_filter(args):
         if args.maximum_year is not None:
             year_filter.set_maximum_year(args.maximum_year)
         return year_filter
+    return None
+
+def _setup_genre_filter(args):
+    if args.genres:
+        return args.genres
+    return None
+
+def _setup_artist_filter(args):
+    if args.artists:
+        return args.artists
     return None
 
 if __name__ == "__main__":
