@@ -1,14 +1,15 @@
+import os
 from threading import Thread
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QObject, Slot, Signal, QDir
 
-from musicsync.core.controller import *
-from musicsync.core.file_copiers import *
-from musicsync.core.filters import *
+from musicsync.core.controller import Controller, MusicSyncError
+from musicsync.core.file_copiers import ADBFileCopier, MSCFileCopier
+from musicsync.core.filters import RatingFilter, YearFilter
 
 class MainWindow(QObject):
-    show_summary_signal = Signal(int, int, int)
+    show_summary_signal = Signal(int, int)
     show_copy_failed_signal = Signal(str)
 
     def __init__(self):
@@ -36,7 +37,7 @@ class MainWindow(QObject):
     def put_existing_dir_path_in_lineedit(self, lineedit):
         path = QDir.toNativeSeparators(QFileDialog.getExistingDirectoryUrl(self.window).path())
         if (os.name == "nt"):
-            #Remove the root slash
+            # Remove the root slash
             path = path[1:]
         lineedit.setText(path)
 
@@ -46,10 +47,10 @@ class MainWindow(QObject):
 
     @Slot()
     def sync(self):
-        if (self.copying_flag):
+        if self.copying_flag:
             QMessageBox.critical(self.window, "Copy not allowed", "There is already a copy task in progress.")
             return
-        if (not self.confirm_copy()):
+        if not self.confirm_copy():
             return
         file_copier = self.get_file_copier()
         filters = self.get_filters()
@@ -59,11 +60,11 @@ class MainWindow(QObject):
 
     def get_file_copier(self):
         transfer_protocol_box_index = self.window.transferProtocolBox.currentIndex()
-        if (transfer_protocol_box_index == 0):
+        if transfer_protocol_box_index == 0:
             return MSCFileCopier()
-        elif (transfer_protocol_box_index == 1):
+        elif transfer_protocol_box_index == 1:
             return ADBFileCopier()
-        raise RuntimeError("Transfer protocol not selected")
+        assert False, "Trasfer protocol not selected."
 
     def get_filters(self):
         filters = []
@@ -97,7 +98,7 @@ class MainWindow(QObject):
 
     def confirm_copy(self):
         answer = QMessageBox.question(self.window, "Copy confirmation", "Do you want to start the copy?")
-        return (QMessageBox.StandardButton.Yes == answer)
+        return QMessageBox.StandardButton.Yes == answer
 
     def start_copy_process(self, file_copier, filters, src, dest):
         thread = Thread(target=self.manage_copy, args=(file_copier, filters, src, dest))
@@ -128,15 +129,14 @@ class MainWindow(QObject):
     @Slot()
     def update_src_line(self):
         adb_text = "ADB device"
-        if (self.window.transferProtocolBox.currentIndex() == 1): #ADB seleted
+        if self.window.transferProtocolBox.currentIndex() == 0: # MSC seleted
+            self.window.srcBrowseButton.setEnabled(True)
+            self.window.srcLine.setEnabled(True)
+            self.window.srcLine.setText("")
+        else: # ADB seleted
             self.window.srcBrowseButton.setEnabled(False)
             self.window.srcLine.setEnabled(False)
             self.window.srcLine.setText(adb_text)
-        else:
-            self.window.srcBrowseButton.setEnabled(True)
-            self.window.srcLine.setEnabled(True)
-            if (self.window.srcLine.text() == adb_text):
-                self.window.srcLine.setText("")
 
     def show(self):
         self.window.show()

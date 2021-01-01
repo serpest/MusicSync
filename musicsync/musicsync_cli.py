@@ -1,7 +1,7 @@
 import sys
 import argparse
 
-from musicsync.core.file_copiers import *
+from musicsync.core.file_copiers import MSCFileCopier, ADBFileCopier
 from musicsync.core.filters import RatingFilter, YearFilter
 from musicsync.core.controller import Controller
 
@@ -31,7 +31,7 @@ def _setup_parser():
     year_filters_group = parser.add_argument_group("year filters", "set up minimum and/or maximum release year of the songs")
     year_filters_group.add_argument("-y", "--min-year", metavar="<arg>", action="store", dest="minimum_year", type=str, help="minimum release year")
     year_filters_group.add_argument("-u", "--max-year", metavar="<arg>", action="store", dest="maximum_year", type=str, help="maximum release year")
-    #parser.add_argument("-l", "--log", action="store_true", help="create a log file")
+    # parser.add_argument("-l", "--log", action="store_true", help="create a log file")
     transfer_protocol_group = parser.add_argument_group("transfer protocol")
     transfer_protocol_mutually_exclusive_group = transfer_protocol_group.add_mutually_exclusive_group(required=True)
     transfer_protocol_mutually_exclusive_group.add_argument("-m", "--msc", action='store_true', dest="msc", help="Mass Storage Class (MSC)")
@@ -45,20 +45,18 @@ def _validate_args(args):
         _validate_rating(args.maximum_rating)
 
 def _validate_rating(rating):
-    if (not _is_rating_valid(rating)):
+    if not _is_rating_valid(rating):
         raise ValueError(f"The rating value must be between {MIN_RATING_VALUE} and {MAX_RATING_VALUE}.")
 
 def _is_rating_valid(rating):
-    return (rating >= MIN_RATING_VALUE and rating <= MAX_RATING_VALUE)
+    return rating >= MIN_RATING_VALUE and rating <= MAX_RATING_VALUE
 
 def _setup_file_copier(args):
-    file_copier = None
-    if (args.msc):
-        file_copier = MSCFileCopier()
-    elif (args.adb):
-        file_copier = ADBFileCopier()
-    assert file_copier is not None, "Trasfer protocol not selected."
-    return file_copier
+    if args.msc:
+        return MSCFileCopier()
+    elif args.adb:
+        return ADBFileCopier()
+    assert False, "Trasfer protocol not selected."
 
 def _setup_filters(args):
     filters = []
