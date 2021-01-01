@@ -109,8 +109,8 @@ class MainWindow(QObject):
         try:
             controller = Controller(file_copier, filters)
             songs_counts = controller.sync(src, dest)
-            copied_songs_count, no_inspectable_songs_count, corrupted_song_files_count = songs_counts
-            self.show_summary_signal.emit(copied_songs_count, no_inspectable_songs_count, corrupted_song_files_count)
+            copied_songs_count, no_inspectable_songs_count = songs_counts
+            self.show_summary_signal.emit(copied_songs_count, no_inspectable_songs_count)
         except MusicSyncError as exc:
             self.show_copy_failed_signal.emit(str(exc))
         finally:
@@ -118,8 +118,8 @@ class MainWindow(QObject):
             self.copying_flag = False
 
     @Slot(int, int)
-    def show_summary(self, copied_songs_count, no_inspectable_songs_count, corrupted_song_files_count):
-        QMessageBox.information(self.window, "Summary", f"Copied songs: {copied_songs_count}\nNot inspected songs: {no_inspectable_songs_count}\nCorrupted song files: {corrupted_song_files_count}")
+    def show_summary(self, copied_songs_count, no_inspectable_songs_count):
+        QMessageBox.information(self.window, "Summary", f"Copied songs: {copied_songs_count}\nNot inspected songs: {no_inspectable_songs_count}")
 
     @Slot(str)
     def show_copy_failed(self, message):

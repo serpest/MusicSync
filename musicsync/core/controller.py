@@ -1,5 +1,4 @@
 import os
-import mutagen
 
 from musicsync.core.file_copiers import *
 
@@ -11,13 +10,12 @@ class Controller():
         self.filters = filters
         self.copied_songs_count = 0
         self.no_inspectable_songs_count = 0
-        self.corrupted_song_files_count = 0
 
     def sync(self, src, dest):
         try:
             self._verify_source_dir(src)
             self._sync_songs(src, dest)
-            return (self.copied_songs_count, self.no_inspectable_songs_count, self.corrupted_song_files_count)
+            return (self.copied_songs_count, self.no_inspectable_songs_count)
         except (FileNotFoundError, FileCopierError) as exc:
             raise MusicSyncError("Sync blocked") from exc
 
@@ -52,20 +50,11 @@ class Controller():
         return filename.lower().endswith(SUPPORTED_FORMATS)
 
     def _check_filters(self, song_path):
-        try:
-            song = mutagen.File(song_path, easy=True)
-        except mutagen.mp3.HeaderNotFoundError as exc:
-            self.corrupted_song_files_count += 1
-            return False
-        if (not song and len(self.filters) != 0):
-            self.no_inspectable_songs_count += 1
-            return False
         for current_filter in self.filters:
-            if (not current_filter.check(song_path, song)):
+            if (not current_filter.check(song_path)):
                 return False
         return True
 
 
 class MusicSyncError(RuntimeError):
-    def __init__(self, message):
-        super().__init__(message)
+    pass
