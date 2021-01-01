@@ -51,5 +51,19 @@ def get_year(song_path):
     return None
 
 
+def get_artist(song_path):
+    song = _get_mutagen_song(song_path)
+    if "artist" in song:
+        return song["artist"]
+    return None
+
+
+def get_genre(song_path):
+    song = _get_mutagen_song(song_path)
+    if "genre" in song:
+        return song["genre"]
+    return None
+
+
 class NoGettableMetadata(RuntimeError):
     pass

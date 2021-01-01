@@ -120,7 +120,7 @@ class MainWindow(QObject):
 
     @Slot(int, int)
     def show_summary(self, copied_songs_count, no_inspectable_songs_count):
-        QMessageBox.information(self.window, "Summary", f"Copied songs: {copied_songs_count}\nNot inspected songs: {no_inspectable_songs_count}")
+        QMessageBox.information(self.window, "Summary", f"Copied songs: {copied_songs_count}\nNo inspectable songs: {no_inspectable_songs_count}")
 
     @Slot(str)
     def show_copy_failed(self, message):
