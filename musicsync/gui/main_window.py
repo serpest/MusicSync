@@ -6,7 +6,7 @@ from PySide2.QtCore import QObject, Slot, Signal, QDir
 
 from musicsync.core.controller import Controller, MusicSyncError
 from musicsync.core.file_copiers import ADBFileCopier, MSCFileCopier
-from musicsync.core.filters import RatingFilter, YearFilter
+from musicsync.core.filters import RatingFilter, YearFilter, GenreFilter, ArtistFilter
 
 class MainWindow(QObject):
     show_summary_signal = Signal(int, int)
@@ -74,6 +74,12 @@ class MainWindow(QObject):
         year_filter = self._setup_year_filter()
         if year_filter is not None:
             filters.append(year_filter)
+        genre_filter = self._setup_genre_filter()
+        if genre_filter is not None:
+            filters.append(genre_filter)
+        artist_filter = self._setup_artist_filter()
+        if artist_filter is not None:
+            filters.append(artist_filter)
         return filters
 
     def _setup_rating_filter(self):
@@ -94,6 +100,19 @@ class MainWindow(QObject):
             if self.window.maximumYearCheckBox.isChecked():
                 year_filter.set_maximum_year(self.window.maximumYearSpinBox.value())
             return year_filter
+        return None
+
+    def _setup_genre_filter(self):
+        if self.window.genresCheckBox.isChecked():
+            # TODO: Put item separators tip in GUI
+            genres = self.window.genresLine.text().split(", ")
+            return GenreFilter(genres)
+        return None
+
+    def _setup_artist_filter(self):
+        if self.window.artistsCheckBox.isChecked():
+            artists = self.window.artistsLine.text().split(", ")
+            return ArtistFilter(artists)
         return None
 
     def confirm_copy(self):

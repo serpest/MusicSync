@@ -4,8 +4,6 @@
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
    <rect>
-    <x>0</x>
-    <y>0</y>
     <width>400</width>
    </rect>
   </property>
@@ -74,11 +72,38 @@
         </widget>
        </item>
        <item row="2" column="1">
-        <layout class="QHBoxLayout" name="minimumRatingBox">
-         <item>
+        <layout class="QGridLayout" name="filtersBox">
+         <item row="0" column="0">
+          <widget class="QCheckBox" name="artistsCheckBox">
+           <property name="text">
+            <string>Artists</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="artistsLine">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QCheckBox" name="genresCheckBox">
+           <property name="text">
+            <string>Genres</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="genresLine"/>
+         </item>
+         <item row="2" column="0">
           <widget class="QCheckBox" name="minimumRatingCheckBox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -88,8 +113,14 @@
            </property>
           </widget>
          </item>
-         <item>
+         <item row="2" column="1">
           <widget class="QDoubleSpinBox" name="minimumRatingSpinBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="maximum">
             <double>5.000000000000000</double>
            </property>
@@ -98,14 +129,10 @@
            </property>
           </widget>
          </item>
-        </layout>
-       </item>
-       <item row="3" column="1">
-        <layout class="QHBoxLayout" name="maximumRatingBox">
-         <item>
+         <item row="3" column="0">
           <widget class="QCheckBox" name="maximumRatingCheckBox">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -115,7 +142,7 @@
            </property>
           </widget>
          </item>
-         <item>
+         <item row="3" column="1">
           <widget class="QDoubleSpinBox" name="maximumRatingSpinBox">
            <property name="maximum">
             <double>5.000000000000000</double>
@@ -125,18 +152,14 @@
            </property>
           </widget>
          </item>
-        </layout>
-       </item>
-       <item row="4" column="1">
-        <layout class="QHBoxLayout" name="minimumYearBox">
-         <item>
+         <item row="4" column="0">
           <widget class="QCheckBox" name="minimumYearCheckBox">
            <property name="text">
             <string>Minimum year</string>
            </property>
           </widget>
          </item>
-         <item>
+         <item row="4" column="1">
           <widget class="QSpinBox" name="minimumYearSpinBox">
            <property name="maximum">
             <number>9999</number>
@@ -146,18 +169,14 @@
            </property>
           </widget>
          </item>
-        </layout>
-       </item>
-       <item row="5" column="1">
-        <layout class="QHBoxLayout" name="maximumYearBox">
-         <item>
+         <item row="5" column="0">
           <widget class="QCheckBox" name="maximumYearCheckBox">
            <property name="text">
             <string>Maximum year</string>
            </property>
           </widget>
          </item>
-         <item>
+         <item row="5" column="1">
           <widget class="QSpinBox" name="maximumYearSpinBox">
            <property name="maximum">
             <number>9999</number>
