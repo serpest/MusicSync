@@ -4,7 +4,7 @@
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
    <rect>
-    <width>400</width>
+    <width>600</width>
    </rect>
   </property>
   <property name="windowTitle">
@@ -82,6 +82,9 @@
          </item>
          <item row="0" column="1">
           <widget class="QLineEdit" name="artistsLine">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -98,7 +101,11 @@
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLineEdit" name="genresLine"/>
+          <widget class="QLineEdit" name="genresLine">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+          </widget>
          </item>
          <item row="2" column="0">
           <widget class="QCheckBox" name="minimumRatingCheckBox">
@@ -115,6 +122,9 @@
          </item>
          <item row="2" column="1">
           <widget class="QDoubleSpinBox" name="minimumRatingSpinBox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -144,6 +154,9 @@
          </item>
          <item row="3" column="1">
           <widget class="QDoubleSpinBox" name="maximumRatingSpinBox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="maximum">
             <double>5.000000000000000</double>
            </property>
@@ -161,6 +174,9 @@
          </item>
          <item row="4" column="1">
           <widget class="QSpinBox" name="minimumYearSpinBox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="maximum">
             <number>9999</number>
            </property>
@@ -178,6 +194,9 @@
          </item>
          <item row="5" column="1">
           <widget class="QSpinBox" name="maximumYearSpinBox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="maximum">
             <number>9999</number>
            </property>

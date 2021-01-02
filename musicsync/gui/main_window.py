@@ -28,7 +28,14 @@ class MainWindow(QObject):
         self.window.syncButton.clicked.connect(self.sync)
         self.show_summary_signal.connect(self.show_summary)
         self.show_copy_failed_signal.connect(self.show_copy_failed)
-        self.window.transferProtocolBox.currentTextChanged.connect(self.update_src_line)
+        self.window.transferProtocolBox.currentTextChanged.connect(self.update_srcline)
+        self.window.artistsCheckBox.clicked.connect(self.update_artistsline)
+        self.window.genresCheckBox.clicked.connect(self.update_genresline)
+        self.window.minimumRatingCheckBox.clicked.connect(self.update_minimumratingspinbox)
+        self.window.maximumRatingCheckBox.clicked.connect(self.update_maximumratingspinbox)
+        self.window.minimumYearCheckBox.clicked.connect(self.update_minimumyearspinbox)
+        self.window.maximumYearCheckBox.clicked.connect(self.update_maximumyearspinbox)
+
 
     @Slot()
     def browse_src_dirs(self):
@@ -146,7 +153,7 @@ class MainWindow(QObject):
         QMessageBox.critical(self.window, "Copy failed", message)
 
     @Slot()
-    def update_src_line(self):
+    def update_srcline(self):
         adb_text = "ADB device"
         if self.window.transferProtocolBox.currentIndex() == 0: # MSC seleted
             self.window.srcBrowseButton.setEnabled(True)
@@ -156,6 +163,48 @@ class MainWindow(QObject):
             self.window.srcBrowseButton.setEnabled(False)
             self.window.srcLine.setEnabled(False)
             self.window.srcLine.setText(adb_text)
+
+    @Slot()
+    def update_artistsline(self):
+        if self.window.artistsCheckBox.isChecked():
+            self.window.artistsLine.setEnabled(True)
+        else:
+            self.window.artistsLine.setEnabled(False)
+
+    @Slot()
+    def update_genresline(self):
+        if self.window.genresCheckBox.isChecked():
+            self.window.genresLine.setEnabled(True)
+        else:
+            self.window.genresLine.setEnabled(False)
+
+    @Slot()
+    def update_minimumratingspinbox(self):
+        if self.window.minimumRatingCheckBox.isChecked():
+            self.window.minimumRatingSpinBox.setEnabled(True)
+        else:
+            self.window.minimumRatingSpinBox.setEnabled(False)
+
+    @Slot()
+    def update_maximumratingspinbox(self):
+        if self.window.maximumRatingCheckBox.isChecked():
+            self.window.maximumRatingSpinBox.setEnabled(True)
+        else:
+            self.window.maximumRatingSpinBox.setEnabled(False)
+
+    @Slot()
+    def update_minimumyearspinbox(self):
+        if self.window.minimumYearCheckBox.isChecked():
+            self.window.minimumYearSpinBox.setEnabled(True)
+        else:
+            self.window.minimumYearSpinBox.setEnabled(False)
+
+    @Slot()
+    def update_maximumyearspinbox(self):
+        if self.window.maximumYearCheckBox.isChecked():
+            self.window.maximumYearSpinBox.setEnabled(True)
+        else:
+            self.window.maximumYearSpinBox.setEnabled(False)
 
     def show(self):
         self.window.show()
