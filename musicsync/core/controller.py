@@ -1,4 +1,5 @@
 import os
+import logging
 
 from musicsync.core.file_copiers import MSCFileCopier, ADBFileCopier, FileCopierError
 
@@ -9,15 +10,18 @@ class Controller():
         self.file_copier = file_copier
         self.filters = filters
         self.copied_songs_count = 0
-        self.no_inspectable_songs_count = 0
+        self.no_inspectable_songs_count = 0 # TODO: count corrupted files in self.no_inspectable_songs_count and display filenames in ControllerLogProxy log
 
     def sync(self, src, dest):
         try:
-            self._verify_source_dir(src)
-            self._sync_songs(src, dest)
-            return (self.copied_songs_count, self.no_inspectable_songs_count)
+            self._manage_sync(src, dest)
         except (FileNotFoundError, FileCopierError) as exc:
             raise MusicSyncError(str(exc))
+
+    def _manage_sync(self, src, dest):
+        self._verify_source_dir(src)
+        self._sync_songs(src, dest)
+        return (self.copied_songs_count, self.no_inspectable_songs_count)
 
     def _verify_source_dir(self, src):
         if not os.path.isdir(src):
@@ -54,6 +58,45 @@ class Controller():
             if not current_filter.check(song_path):
                 return False
         return True
+
+
+# This class does not implement the proxy pattern, so technically it is not a proxy, but the "Proxy" suffix in its name gives a good idea of what it does
+class ControllerLogProxy(Controller):
+    def __init__(self, file_copier, filters, file_log=False):
+        super().__init__(file_copier, filters)
+        self._init_logger()
+        self._init_console_log()
+        if file_log:
+            self._init_file_log()
+
+    def _init_logger(self):
+        log_name = "MusicSync"
+        self.logger = logging.getLogger(log_name)
+        self.logger.setLevel(logging.INFO)
+
+    def _init_console_log(self):
+        formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        self.logger.addHandler(console_handler)
+
+    def _init_file_log(self):
+        path = "MusicSync.log"
+        formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+        file_handler = logging.FileHandler(path, "a+", "utf-8")
+        file_handler.setFormatter(formatter)
+        self.logger.addHandler(file_handler)
+
+    def sync(self, src, dest):
+        try:
+            self._manage_sync(src, dest)
+        except (FileNotFoundError, FileCopierError) as exc:
+            self.logger.error(str(exc))
+            raise MusicSyncError(str(exc))
+
+    def _copy_song(self, song_path_src, song_path_dest):
+        super()._copy_song(song_path_src, song_path_dest)
+        logger.info("{} copied.".format(song_path_src))
 
 
 class MusicSyncError(RuntimeError):

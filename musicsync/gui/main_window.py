@@ -166,45 +166,27 @@ class MainWindow(QObject):
 
     @Slot()
     def update_artistsline(self):
-        if self.window.artistsCheckBox.isChecked():
-            self.window.artistsLine.setEnabled(True)
-        else:
-            self.window.artistsLine.setEnabled(False)
+        self.window.artistsLine.setEnabled(self.window.artistsCheckBox.isChecked())
 
     @Slot()
     def update_genresline(self):
-        if self.window.genresCheckBox.isChecked():
-            self.window.genresLine.setEnabled(True)
-        else:
-            self.window.genresLine.setEnabled(False)
+        self.window.genresLine.setEnabled(self.window.genresCheckBox.isChecked())
 
     @Slot()
     def update_minimumratingspinbox(self):
-        if self.window.minimumRatingCheckBox.isChecked():
-            self.window.minimumRatingSpinBox.setEnabled(True)
-        else:
-            self.window.minimumRatingSpinBox.setEnabled(False)
+        self.window.minimumRatingSpinBox.setEnabled(self.window.minimumRatingCheckBox.isChecked())
 
     @Slot()
     def update_maximumratingspinbox(self):
-        if self.window.maximumRatingCheckBox.isChecked():
-            self.window.maximumRatingSpinBox.setEnabled(True)
-        else:
-            self.window.maximumRatingSpinBox.setEnabled(False)
+        self.window.maximumRatingSpinBox.setEnabled(self.window.maximumRatingCheckBox.isChecked())
 
     @Slot()
     def update_minimumyearspinbox(self):
-        if self.window.minimumYearCheckBox.isChecked():
-            self.window.minimumYearSpinBox.setEnabled(True)
-        else:
-            self.window.minimumYearSpinBox.setEnabled(False)
+        self.window.minimumYearSpinBox.setEnabled(self.window.minimumYearCheckBox.isChecked())
 
     @Slot()
     def update_maximumyearspinbox(self):
-        if self.window.maximumYearCheckBox.isChecked():
-            self.window.maximumYearSpinBox.setEnabled(True)
-        else:
-            self.window.maximumYearSpinBox.setEnabled(False)
+        self.window.maximumYearSpinBox.setEnabled(self.window.maximumYearCheckBox.isChecked())
 
     def show(self):
         self.window.show()
