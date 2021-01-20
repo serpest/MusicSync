@@ -3,6 +3,7 @@ from threading import Thread
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QObject, Slot, Signal, QDir
+from PySide2.QtGui import QIcon
 
 from musicsync.core.controller import Controller, MusicSyncError
 from musicsync.core.file_copiers import ADBFileCopier, MSCFileCopier
@@ -16,11 +17,16 @@ class MainWindow(QObject):
         super(MainWindow, self).__init__()
         self.copying_flag = False
         self.load_ui()
+        self.setup_window_icon()
         self.setup_actions()
 
     def load_ui(self):
         loader = QUiLoader()
         self.window = loader.load("musicsync\\resources\\ui\\main_window.ui")
+
+    def setup_window_icon(self):
+        icon = QIcon("musicsync\\resources\\images\\icon.png")
+        self.window.setWindowIcon(icon)
 
     def setup_actions(self):
         self.window.srcBrowseButton.clicked.connect(self.browse_src_dirs)
