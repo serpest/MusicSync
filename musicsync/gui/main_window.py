@@ -9,6 +9,8 @@ from musicsync.core.controller import Controller, MusicSyncError
 from musicsync.core.file_copiers import ADBFileCopier, MSCFileCopier
 from musicsync.core.filters import RatingFilter, YearFilter, GenreFilter, ArtistFilter
 
+ITEMS_SEPARATOR = ", "
+
 class MainWindow(QObject):
     show_summary_signal = Signal(int, int)
     show_copy_failed_signal = Signal(str)
@@ -118,13 +120,13 @@ class MainWindow(QObject):
     def _setup_genre_filter(self):
         if self.window.genresCheckBox.isChecked():
             # TODO: Put item separators tip in GUI
-            genres = self.window.genresLine.text().split(", ")
+            genres = self.window.genresLine.text().split(ITEMS_SEPARATOR)
             return GenreFilter(genres)
         return None
 
     def _setup_artist_filter(self):
         if self.window.artistsCheckBox.isChecked():
-            artists = self.window.artistsLine.text().split(", ")
+            artists = self.window.artistsLine.text().split(ITEMS_SEPARATOR)
             return ArtistFilter(artists)
         return None
 
@@ -162,13 +164,13 @@ class MainWindow(QObject):
     def update_srcline(self):
         adb_text = "ADB device"
         if self.window.transferProtocolBox.currentIndex() == 0: # MSC seleted
-            self.window.srcBrowseButton.setEnabled(True)
-            self.window.srcLine.setEnabled(True)
-            self.window.srcLine.setText("")
+            self.window.destBrowseButton.setEnabled(True)
+            self.window.destLine.setEnabled(True)
+            self.window.destLine.setText("")
         else: # ADB seleted
-            self.window.srcBrowseButton.setEnabled(False)
-            self.window.srcLine.setEnabled(False)
-            self.window.srcLine.setText(adb_text)
+            self.window.destBrowseButton.setEnabled(False)
+            self.window.destLine.setEnabled(False)
+            self.window.destLine.setText(adb_text)
 
     @Slot()
     def update_artistsline(self):
