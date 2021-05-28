@@ -1,21 +1,23 @@
 import os
 import logging
-
-from musicsync.core.file_copiers import MSCFileCopier, ADBFileCopier, FileCopierError
+import musicsync.core.file_copiers as file_copiers
+import musicsync.core.format_conversion as format_conversion
 
 SUPPORTED_FORMATS = (".mp3", ".flac") # Make sure to modify songs_metadata.py implementation before changing this value
 
 class Controller():
-    def __init__(self, file_copier, filters):
+    def __init__(self, file_copier, filters=[], output_format=None, output_bitrate=None):
         self.file_copier = file_copier
         self.filters = filters
+        self.output_format = output_format
+        self.output_bitrate = output_bitrate
         self.copied_songs_count = 0
         self.no_inspectable_songs_count = 0 # TODO: count corrupted files in self.no_inspectable_songs_count and display filenames in ControllerLogProxy log
 
     def sync(self, src, dest):
         try:
             self._manage_sync(src, dest)
-        except (FileNotFoundError, FileCopierError) as exc:
+        except (FileNotFoundError, file_copiers.FileCopierError) as exc:
             raise MusicSyncError(str(exc))
 
     def _manage_sync(self, src, dest):
@@ -38,13 +40,18 @@ class Controller():
                         self._copy_song_lyrics(song_path_src, song_path_dest)
 
     def _copy_song(self, song_path_src, song_path_dest):
-        self.file_copier.copy(song_path_src, song_path_dest)
+        self.file_copier.copy(_get_copy_file_function(song_path_src), song_path_dest)
         self.copied_songs_count += 1
+
+    def _get_copy_file_function(self, song_path_src):
+        if output_format is not None:
+            return format_conversion.get_convert_and_copy_song_function(song_path_src, self.output_format, self.output_bitrate)
+        return file_copiers.get_copy_file_function(song_path_src)
 
     def _copy_song_lyrics(self, song_path_src, song_path_dest):
         lyrics_path_src = self._get_lyrics_path(song_path_src)
         lyrics_path_dest = self._get_lyrics_path(song_path_dest)
-        self.file_copier.copy(lyrics_path_src, lyrics_path_dest)
+        self.file_copier.copy(file_copiers.get_copy_file_function(lyrics_path_src), lyrics_path_dest)
 
     def _get_lyrics_path(self, song_path):
         # Same filename, different extension
@@ -90,7 +97,7 @@ class ControllerLogProxy(Controller):
     def sync(self, src, dest):
         try:
             self._manage_sync(src, dest)
-        except (FileNotFoundError, FileCopierError) as exc:
+        except (FileNotFoundError, file_copiers.FileCopierError) as exc:
             self.logger.error(str(exc))
             raise MusicSyncError(str(exc))
 
