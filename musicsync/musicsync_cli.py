@@ -18,7 +18,8 @@ def main():
         sys.exit(1)
     file_copier = _setup_file_copier(args)
     filters = _setup_filters(args)
-    controller = ControllerLogProxy(file_copier, filters, args.log)
+    output_format, output_bitrate = _setup_format_conversion(args)
+    controller = ControllerLogProxy(file_copier, filters, output_format, output_bitrate, args.log)
     controller.sync(args.src, args.dest)
 
 def _setup_parser():
@@ -38,6 +39,9 @@ def _setup_parser():
     transfer_protocol_mutually_exclusive_group = transfer_protocol_group.add_mutually_exclusive_group(required=True)
     transfer_protocol_mutually_exclusive_group.add_argument("-m", "--msc", action='store_true', dest="msc", help="Mass Storage Class (MSC)")
     transfer_protocol_mutually_exclusive_group.add_argument("-a", "--adb", action='store_true', dest="adb", help="Android Debug Bridge (ADB)")
+    format_conversion_group = parser.add_argument_group("format conversion", "set up songs output format and bitrate (every combination that ffmpeg supports)")
+    format_conversion_group.add_argument("-f", "--output-format", metavar="<arg>", action="store", dest="output_format", type=str, help="audio format")
+    format_conversion_group.add_argument("-b", "--output-bitrate", metavar="<arg>", action="store", dest="output_bitrate", type=str, help="audio format bitrate")
     parser.add_argument("-l", "--log", action="store_true", help="create a log file")
     return parser
 
@@ -46,10 +50,15 @@ def _validate_args(args):
         _validate_rating(args.minimum_rating)
     if args.maximum_rating is not None:
         _validate_rating(args.maximum_rating)
+    _validate_format_conversion(args.output_format, args.output_bitrate)
 
 def _validate_rating(rating):
     if not _is_rating_valid(rating):
         raise ValueError(f"The rating value must be between {MIN_RATING_VALUE} and {MAX_RATING_VALUE}.")
+
+def _validate_format_conversion(output_format, output_bitrate):
+    if output_bitrate is not None and output_format is None:
+        raise ValueError("Output format required if output bitrate is selected.")
 
 def _is_rating_valid(rating):
     return rating >= MIN_RATING_VALUE and rating <= MAX_RATING_VALUE
@@ -106,6 +115,9 @@ def _setup_artist_filter(args):
     if args.artists:
         return args.artists
     return None
+
+def _setup_format_conversion(args):
+    return args.output_format, args.output_bitrate
 
 if __name__ == "__main__":
     main()

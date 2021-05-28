@@ -69,8 +69,8 @@ class Controller():
 
 # This class does not implement the proxy pattern, so technically it is not a proxy, but the "Proxy" suffix in its name gives a good idea of what it does
 class ControllerLogProxy(Controller):
-    def __init__(self, file_copier, filters, file_log=False):
-        super().__init__(file_copier, filters)
+    def __init__(self, file_copier, filters=[], output_format=None, output_bitrate=None, file_log=False):
+        super().__init__(file_copier, filters, output_format, output_bitrate)
         self._init_logger()
         self._init_console_log()
         if file_log:
