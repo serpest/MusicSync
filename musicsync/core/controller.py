@@ -40,11 +40,11 @@ class Controller():
                         self._copy_song_lyrics(song_path_src, song_path_dest)
 
     def _copy_song(self, song_path_src, song_path_dest):
-        self.file_copier.copy(_get_copy_file_function(song_path_src), song_path_dest)
+        self.file_copier.copy(self._get_copy_file_function(song_path_src), song_path_dest)
         self.copied_songs_count += 1
 
     def _get_copy_file_function(self, song_path_src):
-        if output_format is not None:
+        if self.output_format is not None:
             return format_conversion.get_convert_and_copy_song_function(song_path_src, self.output_format, self.output_bitrate)
         return file_copiers.get_copy_file_function(song_path_src)
 
