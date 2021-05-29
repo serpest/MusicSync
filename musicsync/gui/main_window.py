@@ -45,6 +45,8 @@ class MainWindow(QObject):
         self.window.maximumRatingCheckBox.clicked.connect(self.update_maximumratingspinbox)
         self.window.minimumYearCheckBox.clicked.connect(self.update_minimumyearspinbox)
         self.window.maximumYearCheckBox.clicked.connect(self.update_maximumyearspinbox)
+        self.window.outputFormatCheckBox.clicked.connect(self.update_outputformatcombobox)
+        self.window.outputBitrateCheckBox.clicked.connect(self.update_outputbitratespinbox)
 
 
     @Slot()
@@ -73,7 +75,8 @@ class MainWindow(QObject):
         filters = self._get_filters()
         src = self.window.srcLine.text()
         dest = self.window.destLine.text()
-        self._start_copy_process(file_copier, filters, src, dest)
+        output_format, output_bitrate = self._get_output_format_and_bitrate()
+        self._start_copy_process(file_copier, filters, src, dest, output_format, output_bitrate)
 
     def _get_file_copier(self):
         transfer_protocol_box_index = self.window.transferProtocolBox.currentIndex()
@@ -98,6 +101,15 @@ class MainWindow(QObject):
         if artist_filter is not None:
             filters.append(artist_filter)
         return filters
+
+    def _get_output_format_and_bitrate(self):
+        # TODO
+        if self.window.outputFormatCheckBox.isChecked() and self.window.outputBitrateCheckBox.isChecked():
+            return (self.window.outputFormatComboBox.currentText(), str(self.window.outputBitrateSpinBox.value()))
+        elif self.window.outputFormatCheckBox.isChecked():
+            return (self.window.outputFormatComboBox.currentText(), None)
+        return (None, None)
+
 
     def _setup_rating_filter(self):
         if self.window.minimumRatingCheckBox.isChecked() or self.window.maximumRatingCheckBox.isChecked():
@@ -136,18 +148,18 @@ class MainWindow(QObject):
         answer = QMessageBox.question(self.window, "Copy confirmation", "Do you want to start the copy?")
         return QMessageBox.StandardButton.Yes == answer
 
-    def _start_copy_process(self, file_copier, filters, src, dest):
-        self.process = multiprocessing.Process(target=self._manage_copy, args=(file_copier, filters, src, dest))
+    def _start_copy_process(self, file_copier, filters, src, dest, output_format, output_bitrate):
+        self.process = multiprocessing.Process(target=self._manage_copy, args=(file_copier, filters, src, dest, output_format, output_bitrate))
         self.process.start()
 
     def _stop_copy_process(self):
         self.process.terminate()
 
-    def _manage_copy(self, file_copier, filters, src, dest):
+    def _manage_copy(self, file_copier, filters, src, dest, output_format, output_bitrate):
         self.copying_flag = True
         self.window.statusbar.showMessage("Syncing songs...")
         try:
-            controller = Controller(file_copier, filters)
+            controller = Controller(file_copier, filters, output_format, output_bitrate)
             songs_counts = controller.sync(src, dest)
             copied_songs_count, no_inspectable_songs_count = songs_counts
             self.show_summary_signal.emit(copied_songs_count, no_inspectable_songs_count)
@@ -214,6 +226,14 @@ class MainWindow(QObject):
     @Slot()
     def update_maximumyearspinbox(self):
         self.window.maximumYearSpinBox.setEnabled(self.window.maximumYearCheckBox.isChecked())
+
+    @Slot()
+    def update_outputformatcombobox(self):
+        self.window.outputFormatComboBox.setEnabled(self.window.outputFormatCheckBox.isChecked())
+
+    @Slot()
+    def update_outputbitratespinbox(self):
+        self.window.outputBitrateSpinBox.setEnabled(self.window.outputBitrateCheckBox.isChecked())
 
     def show(self):
         self.window.show()

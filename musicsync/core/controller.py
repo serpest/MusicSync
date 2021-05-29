@@ -37,7 +37,7 @@ class Controller():
                     song_path_dest = os.path.join(dest, os.path.relpath(song_path_src, src))
                     if not self.filters or self._check_filters(song_path_src):
                         self._copy_song(song_path_src, song_path_dest)
-                        self._copy_song_lyrics(song_path_src, song_path_dest)
+                        self._copy_song_lyrics_if_exists(song_path_src, song_path_dest)
 
     def _copy_song(self, song_path_src, song_path_dest):
         self.file_copier.copy(self._get_copy_file_function(song_path_src), song_path_dest)
@@ -48,10 +48,11 @@ class Controller():
             return format_conversion.get_convert_and_copy_song_function(song_path_src, self.output_format, self.output_bitrate)
         return file_copiers.get_copy_file_function(song_path_src)
 
-    def _copy_song_lyrics(self, song_path_src, song_path_dest):
+    def _copy_song_lyrics_if_exists(self, song_path_src, song_path_dest):
         lyrics_path_src = self._get_lyrics_path(song_path_src)
         lyrics_path_dest = self._get_lyrics_path(song_path_dest)
-        self.file_copier.copy(file_copiers.get_copy_file_function(lyrics_path_src), lyrics_path_dest)
+        if os.path.isfile(lyrics_path_src):
+            self.file_copier.copy(file_copiers.get_copy_file_function(lyrics_path_src), lyrics_path_dest)
 
     def _get_lyrics_path(self, song_path):
         # Same filename, different extension
@@ -103,7 +104,7 @@ class ControllerLogProxy(Controller):
 
     def _copy_song(self, song_path_src, song_path_dest):
         super()._copy_song(song_path_src, song_path_dest)
-        logger.info("{} copied.".format(song_path_src))
+        self.logger.info("{} copied.".format(song_path_src))
 
 
 class MusicSyncError(RuntimeError):
