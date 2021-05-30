@@ -1,5 +1,5 @@
 import os
-import multiprocessing
+import threading
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from PySide2.QtUiTools import QUiLoader
 from PySide2.QtCore import QObject, Slot, Signal, QDir
@@ -19,6 +19,7 @@ class MainWindow(QObject):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.copying_flag = False
+        self.window_closed = False # It is used to stop sync process by the controller if the main window has been closed
         self._load_ui()
         self._setup_window_icon()
         self._setup_actions()
@@ -103,11 +104,10 @@ class MainWindow(QObject):
         return filters
 
     def _get_output_format_and_bitrate(self):
-        # TODO
         if self.window.outputFormatCheckBox.isChecked() and self.window.outputBitrateCheckBox.isChecked():
-            return (self.window.outputFormatComboBox.currentText(), str(self.window.outputBitrateSpinBox.value()))
+            return (self.window.outputFormatComboBox.currentText().strip(), str(self.window.outputBitrateSpinBox.value()))
         elif self.window.outputFormatCheckBox.isChecked():
-            return (self.window.outputFormatComboBox.currentText(), None)
+            return (self.window.outputFormatComboBox.currentText().strip(), None)
         return (None, None)
 
 
@@ -149,18 +149,15 @@ class MainWindow(QObject):
         return QMessageBox.StandardButton.Yes == answer
 
     def _start_copy_process(self, file_copier, filters, src, dest, output_format, output_bitrate):
-        self.process = multiprocessing.Process(target=self._manage_copy, args=(file_copier, filters, src, dest, output_format, output_bitrate))
-        self.process.start()
-
-    def _stop_copy_process(self):
-        self.process.terminate()
+        thread = threading.Thread(target=self._manage_copy, args=(file_copier, filters, src, dest, output_format, output_bitrate))
+        thread.start()
 
     def _manage_copy(self, file_copier, filters, src, dest, output_format, output_bitrate):
         self.copying_flag = True
         self.window.statusbar.showMessage("Syncing songs...")
         try:
             controller = Controller(file_copier, filters, output_format, output_bitrate)
-            songs_counts = controller.sync(src, dest)
+            songs_counts = controller.sync(src, dest, lambda: not self.window_closed)
             copied_songs_count, no_inspectable_songs_count = songs_counts
             self.show_summary_signal.emit(copied_songs_count, no_inspectable_songs_count)
         except MusicSyncError as exc:
@@ -177,7 +174,7 @@ class MainWindow(QObject):
     def _close_event_filter(self, event):
         answer = QMessageBox.question(self.window, "Stop confirmation", "Copy process is running. Do you want to stop it?")
         if QMessageBox.StandardButton.Yes == answer:
-            self._stop_copy_process()
+            self.window_closed = True
             return False
         else:
             event.ignore()

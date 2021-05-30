@@ -9,32 +9,34 @@ class Controller():
     def __init__(self, file_copier, filters=[], output_format=None, output_bitrate=None):
         self.file_copier = file_copier
         self.filters = filters
-        self.output_format = output_format
+        self.output_format = output_format.lower()
         self.output_bitrate = output_bitrate
         self.copied_songs_count = 0
         self.no_inspectable_songs_count = 0 # TODO: count corrupted files in self.no_inspectable_songs_count and display filenames in ControllerLogProxy log
 
-    def sync(self, src, dest):
+    def sync(self, src, dest, can_i_sync=lambda: True):
         try:
-            self._manage_sync(src, dest)
+            return self._manage_sync(src, dest, can_i_sync)
         except (FileNotFoundError, file_copiers.FileCopierError) as exc:
             raise MusicSyncError(str(exc))
 
-    def _manage_sync(self, src, dest):
+    def _manage_sync(self, src, dest, can_i_sync):
         self._verify_source_dir(src)
-        self._sync_songs(src, dest)
+        self._sync_songs(src, dest, can_i_sync)
         return (self.copied_songs_count, self.no_inspectable_songs_count)
 
     def _verify_source_dir(self, src):
         if not os.path.isdir(src):
             raise FileNotFoundError("The source directory is not valid.")
 
-    def _sync_songs(self, src, dest):
+    def _sync_songs(self, src, dest, can_i_sync):
         for root, _, files in os.walk(src):
             for filename in files:
+                if not can_i_sync():
+                    return
                 if self._is_file_supported(filename):
                     song_path_src = os.path.join(root, filename)
-                    song_path_dest = os.path.join(dest, os.path.relpath(song_path_src, src))
+                    song_path_dest = self._get_song_path_dest(src, dest, song_path_src)
                     if not self.filters or self._check_filters(song_path_src):
                         self._copy_song(song_path_src, song_path_dest)
                         self._copy_song_lyrics_if_exists(song_path_src, song_path_dest)
@@ -47,6 +49,12 @@ class Controller():
         if self.output_format is not None:
             return format_conversion.get_convert_and_copy_song_function(song_path_src, self.output_format, self.output_bitrate)
         return file_copiers.get_copy_file_function(song_path_src)
+
+    def _get_song_path_dest(self, src, dest, song_path_src):
+        song_path_dest_with_same_format = os.path.join(dest, os.path.relpath(song_path_src, src))
+        if self.output_format is not None:
+            return os.path.splitext(song_path_dest_with_same_format)[0] + "." + self.output_format
+        return song_path_dest_with_same_format
 
     def _copy_song_lyrics_if_exists(self, song_path_src, song_path_dest):
         lyrics_path_src = self._get_lyrics_path(song_path_src)
@@ -95,9 +103,9 @@ class ControllerLogProxy(Controller):
         file_handler.setFormatter(formatter)
         self.logger.addHandler(file_handler)
 
-    def sync(self, src, dest):
+    def sync(self, src, dest, can_i_sync=lambda: True):
         try:
-            self._manage_sync(src, dest)
+            self._manage_sync(src, dest, can_i_sync)
         except (FileNotFoundError, file_copiers.FileCopierError) as exc:
             self.logger.error(str(exc))
             raise MusicSyncError(str(exc))
