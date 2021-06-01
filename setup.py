@@ -9,5 +9,5 @@ setup(
     author='serpest',
     author_email='serpest@protonmail.com',
     packages=find_packages(),
-    install_requires=['mutagen', 'PySide2'],
+    install_requires=['mutagen', 'pydub', 'PySide2'],
 )

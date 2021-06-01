@@ -9,7 +9,7 @@ from musicsync.core.controller import Controller, MusicSyncError
 from musicsync.core.file_copiers import ADBFileCopier, MSCFileCopier
 from musicsync.core.filters import RatingFilter, YearFilter, GenreFilter, ArtistFilter
 
-ITEMS_SEPARATOR = ", "
+ITEMS_SEPARATOR = ", " # Make sure to modify item separators tips in GUI after changing this value
 
 # It wraps the window defined in the ui file
 class MainWindow(QObject):
@@ -105,11 +105,10 @@ class MainWindow(QObject):
 
     def _get_output_format_and_bitrate(self):
         if self.window.outputFormatCheckBox.isChecked() and self.window.outputBitrateCheckBox.isChecked():
-            return (self.window.outputFormatComboBox.currentText().strip(), str(self.window.outputBitrateSpinBox.value()))
+            return (self.window.outputFormatComboBox.currentText().strip(), f"{self.window.outputBitrateSpinBox.value()}k")
         elif self.window.outputFormatCheckBox.isChecked():
             return (self.window.outputFormatComboBox.currentText().strip(), None)
         return (None, None)
-
 
     def _setup_rating_filter(self):
         if self.window.minimumRatingCheckBox.isChecked() or self.window.maximumRatingCheckBox.isChecked():
@@ -133,7 +132,6 @@ class MainWindow(QObject):
 
     def _setup_genre_filter(self):
         if self.window.genresCheckBox.isChecked():
-            # TODO: Put item separators tip in GUI
             genres = self.window.genresLine.text().split(ITEMS_SEPARATOR)
             return GenreFilter(genres)
         return None

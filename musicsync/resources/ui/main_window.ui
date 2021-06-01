@@ -243,6 +243,12 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="toolTip">
+          <string>Use &quot;, &quot; as items separator to include multiple artists</string>
+         </property>
+         <property name="statusTip">
+          <string/>
+         </property>
         </widget>
        </item>
        <item row="1" column="0">
@@ -256,6 +262,12 @@
         <widget class="QLineEdit" name="genresLine">
          <property name="enabled">
           <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string>Use &quot;, &quot; as items separator to include multiple genres</string>
+         </property>
+         <property name="statusTip">
+          <string/>
          </property>
         </widget>
        </item>

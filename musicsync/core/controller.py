@@ -42,8 +42,9 @@ class Controller():
                         self._copy_song_lyrics_if_exists(song_path_src, song_path_dest)
 
     def _copy_song(self, song_path_src, song_path_dest):
-        self.file_copier.copy(self._get_copy_file_function(song_path_src), song_path_dest)
+        copied_flag = self.file_copier.copy(self._get_copy_file_function(song_path_src), song_path_dest)
         self.copied_songs_count += 1
+        return copied_flag
 
     def _get_copy_file_function(self, song_path_src):
         if self.output_format is not None:
@@ -111,8 +112,10 @@ class ControllerLogProxy(Controller):
             raise MusicSyncError(str(exc))
 
     def _copy_song(self, song_path_src, song_path_dest):
-        super()._copy_song(song_path_src, song_path_dest)
-        self.logger.info("{} copied.".format(song_path_src))
+        if super()._copy_song(song_path_src, song_path_dest):
+            self.logger.info("{} copied.".format(song_path_src))
+        else:
+            self.logger.info("{} already exists.".format(song_path_src))
 
 
 class MusicSyncError(RuntimeError):
