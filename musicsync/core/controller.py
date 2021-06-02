@@ -43,7 +43,8 @@ class Controller():
 
     def _copy_song(self, song_path_src, song_path_dest):
         copied_flag = self.file_copier.copy(self._get_copy_file_function(song_path_src), song_path_dest)
-        self.copied_songs_count += 1
+        if copied_flag:
+            self.copied_songs_count += 1
         return copied_flag
 
     def _get_copy_file_function(self, song_path_src):

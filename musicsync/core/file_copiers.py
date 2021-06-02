@@ -42,10 +42,11 @@ class ADBFileCopier():
             return False
         dest_dir_path = os.path.dirname(dest_file_path)
         self._create_directory_if_necessary(dest_dir_path)
-        with tempfile.NamedTemporaryFile(delete=False) as temporary_file: # TODO
+        # See https://stackoverflow.com/questions/23212435 to understand why temporary_file is deleted manually in the following 4 lines of code
+        with tempfile.NamedTemporaryFile(delete=False) as temporary_file:
             copy_file_function(temporary_file.name)
         self._push_file(temporary_file.name, dest_file_path)
-        os.unlink(temporary_file.name)
+        os.unlink(temporary_file.name) 
         return True
 
     def _convert_windows_path_to_unix_path(self, windows_path):

@@ -1,5 +1,4 @@
 import mutagen
-from mutagen.id3 import ID3
 
 def get_rating(song_path):
     if song_path.endswith(".mp3"):
@@ -9,7 +8,7 @@ def get_rating(song_path):
     return None
 
 def _get_mp3_rating(song_path):
-    id3 = ID3(song_path)
+    id3 = mutagen.id3.ID3(song_path)
     popm_key = _get_first_popm_key(id3.keys())
     if popm_key:
         popm = id3.get(popm_key)
@@ -34,7 +33,7 @@ def _get_flac_rating(song_path):
 def _get_mutagen_song(song_path):
     try:
         return mutagen.File(song_path, easy=True)
-    except mutagen.mp3.HeaderNotFoundError as exc:
+    except (mutagen.mp3.HeaderNotFoundError, mutagen.flac.FLACNoHeaderError) as exc:
         raise NoGettableMetadata(str(exc))
 
 
