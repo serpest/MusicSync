@@ -9,7 +9,7 @@ class Controller():
     def __init__(self, file_copier, filters=[], output_format=None, output_bitrate=None):
         self.file_copier = file_copier
         self.filters = filters
-        self.output_format = output_format.lower()
+        self.output_format = output_format
         self.output_bitrate = output_bitrate
         self.copied_songs_count = 0
         self.no_inspectable_songs_count = 0 # TODO: count corrupted files in self.no_inspectable_songs_count and display filenames in ControllerLogProxy log
@@ -48,14 +48,14 @@ class Controller():
         return copied_flag
 
     def _get_copy_file_function(self, song_path_src):
-        if self.output_format is not None:
-            return format_conversion.get_convert_and_copy_song_function(song_path_src, self.output_format, self.output_bitrate)
+        if self.output_format is not None and os.path.splitext(song_path_src)[1] != self.output_format.lower(): # A custom output format is selected and the source file format is different from the chosen one
+            return format_conversion.get_convert_song_function(song_path_src, self.output_format.lower(), self.output_bitrate)
         return file_copiers.get_copy_file_function(song_path_src)
 
     def _get_song_path_dest(self, src, dest, song_path_src):
         song_path_dest_with_same_format = os.path.join(dest, os.path.relpath(song_path_src, src))
         if self.output_format is not None:
-            return os.path.splitext(song_path_dest_with_same_format)[0] + "." + self.output_format
+            return os.path.splitext(song_path_dest_with_same_format)[0] + "." + self.output_format.lower()
         return song_path_dest_with_same_format
 
     def _copy_song_lyrics_if_exists(self, song_path_src, song_path_dest):
@@ -108,7 +108,7 @@ class ControllerLogProxy(Controller):
     def sync(self, src, dest, can_i_sync=lambda: True):
         try:
             self._manage_sync(src, dest, can_i_sync)
-        except (FileNotFoundError, file_copiers.FileCopierError) as exc:
+        except (FileNotFoundError, file_copiers.FileCopierError, format_conversion.FormatConverterError) as exc:
             self.logger.error(str(exc))
             raise MusicSyncError(str(exc))
 

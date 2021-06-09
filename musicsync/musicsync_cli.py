@@ -3,7 +3,7 @@ import argparse
 
 from musicsync.core.file_copiers import MSCFileCopier, ADBFileCopier
 from musicsync.core.filters import RatingFilter, YearFilter, GenreFilter, ArtistFilter
-from musicsync.core.controller import ControllerLogProxy
+from musicsync.core.controller import ControllerLogProxy, MusicSyncError
 
 MIN_RATING_VALUE = 0
 MAX_RATING_VALUE = 5
@@ -20,7 +20,10 @@ def main():
     filters = _setup_filters(args)
     output_format, output_bitrate = _setup_format_conversion(args)
     controller = ControllerLogProxy(file_copier, filters, output_format, output_bitrate, args.log)
-    controller.sync(args.src, args.dest)
+    try:
+        controller.sync(args.src, args.dest)
+    except MusicSyncError as exc:
+        sys.exit(2)
 
 def _setup_parser():
     parser = argparse.ArgumentParser(description="Sync music library between devices and folders")

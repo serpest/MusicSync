@@ -33,7 +33,7 @@ def _get_flac_rating(song_path):
 def _get_mutagen_song(song_path):
     try:
         return mutagen.File(song_path, easy=True)
-    except (mutagen.mp3.HeaderNotFoundError, mutagen.flac.FLACNoHeaderError) as exc:
+    except (mutagen.mp3.HeaderNotFoundError, mutagen.flac.error) as exc:
         raise NoGettableMetadata(str(exc))
 
 
