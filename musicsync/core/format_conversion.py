@@ -13,7 +13,7 @@ with warnings.catch_warnings(record=True) as w:
 
 def _raise_exception_if_converter_does_not_work():
     if ffmpeg__and_avconv_not_found_flag:
-        raise FormatConverterError("Couldn't find ffmpeg or avconv.")
+        raise FormatConverterNotFound("Couldn't find ffmpeg or avconv.")
 
 def get_convert_song_function(input_filename, format, bitrate=None):
     return lambda output_filename : convert_song(input_filename, output_filename, format, bitrate)
@@ -22,9 +22,14 @@ def convert_song(input_filename, output_filename, format, bitrate=None):
     _raise_exception_if_converter_does_not_work()
     song = pydub.AudioSegment.from_file(input_filename)
     try:
-        song.export(output_filename, format=format, bitrate=bitrate)
+        song.export(output_filename, format=format, bitrate=bitrate, tags=pydub.utils.mediainfo(input_filename).get("TAG", {})) # See https://github.com/jiaaro/pydub/issues/44
     except pydub.exceptions.CouldntEncodeError:
-        raise FormatConverterError("Format conversion failed during encording.")
+        raise FormatConvertersionError("Output file encording failed.")
 
-class FormatConverterError(RuntimeError):
+
+class FormatConverterNotFound(RuntimeError):
+    pass
+
+
+class FormatConvertersionError(RuntimeError):
     pass

@@ -38,10 +38,19 @@ class Controller():
                     song_path_src = os.path.join(root, filename)
                     song_path_dest = self._get_song_path_dest(src, dest, song_path_src)
                     if not self.filters or self._check_filters(song_path_src):
-                        self._copy_song(song_path_src, song_path_dest)
-                        self._copy_song_lyrics_if_exists(song_path_src, song_path_dest)
+                        self._copy_song_and_related_files(song_path_src, song_path_dest)
+
+    def _copy_song_and_related_files(self, song_path_src, song_path_dest):
+        self._copy_song(song_path_src, song_path_dest)
+        self._copy_song_lyrics_if_exists(song_path_src, song_path_dest)
 
     def _copy_song(self, song_path_src, song_path_dest):
+        try:
+            self._copy_song_helper(song_path_src, song_path_dest)
+        except format_conversion.FormatConvertersionError:
+            pass
+
+    def _copy_song_helper(self, song_path_src, song_path_dest):
         copied_flag = self.file_copier.copy(self._get_copy_file_function(song_path_src), song_path_dest)
         if copied_flag:
             self.copied_songs_count += 1
@@ -108,15 +117,18 @@ class ControllerLogProxy(Controller):
     def sync(self, src, dest, can_i_sync=lambda: True):
         try:
             self._manage_sync(src, dest, can_i_sync)
-        except (FileNotFoundError, file_copiers.FileCopierError, format_conversion.FormatConverterError) as exc:
+        except (FileNotFoundError, file_copiers.FileCopierError, format_conversion.FormatConverterNotFound) as exc:
             self.logger.error(str(exc))
             raise MusicSyncError(str(exc))
 
     def _copy_song(self, song_path_src, song_path_dest):
-        if super()._copy_song(song_path_src, song_path_dest):
-            self.logger.info("{} copied.".format(song_path_src))
-        else:
-            self.logger.info("{} already exists.".format(song_path_src))
+        try:
+            if self._copy_song_helper(song_path_src, song_path_dest):
+                self.logger.info("{} copied.".format(song_path_src))
+            else:
+                self.logger.info("{} already exists.".format(song_path_src))
+        except format_conversion.FormatConvertersionError as exc:
+            self.logger.warning("{} can't be converted to {}.".format(song_path_src, self.output_format))
 
 
 class MusicSyncError(RuntimeError):
